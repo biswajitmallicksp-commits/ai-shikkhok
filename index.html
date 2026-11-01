@@ -1000,6 +1000,8 @@ window.appBack = () => {
   return true;
 };
 function alertMsg(t) { paint({ role: 'model', text: t, err: true, note: true }); }
+// messages from the Android app (missing Bengali voice, volume off, voice typing problems)
+window.__nativeNotice = (m) => { if (!$('#s-chat').hidden) alertMsg(m); else toast(m); };
 
 /* ============ start ============ */
 // students who logged in before the school box existed are asked once for their school
