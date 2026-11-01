@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#0E5C61">
 <title>শিক্ষক বট</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="শিক্ষক বট">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap">
@@ -233,6 +239,7 @@ input,textarea{font:inherit;color:inherit}
         <h2>তোমার রিভিশন</h2>
         <div id="progBody" class="small">লোড হচ্ছে…</div>
       </div>
+      <button class="btn" id="installB" hidden>📲 অ্যাপ হিসেবে ফোনে রাখো</button>
       <button class="linkbtn" id="logout" style="align-self:flex-start">অন্য ছাত্র/ছাত্রী? লগ আউট</button>
     </div>
   </section>
@@ -787,14 +794,19 @@ $('#sendB').onclick = () => { const v = txt.value; txt.value = ''; txt.style.hei
 let speakOn = false, bnVoice = null;
 function pickVoice() { const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || []; bnVoice = vs.find((v) => /^bn[-_]IN/i.test(v.lang)) || vs.find((v) => /^bn/i.test(v.lang)) || null; }
 if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function setSpeak(on) { speakOn = !!on && !!window.speechSynthesis; $('#speakT').setAttribute('aria-pressed', speakOn); $('#speakT').textContent = speakOn ? '🔊' : '🔈'; store.set('speak_' + mode, speakOn); }
+// Inside the Android app the phone's own Bengali voice is used (window.AndroidBridge); in a browser, speechSynthesis.
+const NATIVE = window.AndroidBridge || null;
+const canSpeak = () => !!(NATIVE || window.speechSynthesis);
+window.__nativeTtsDone = () => afterSpeech();
+function setSpeak(on) { speakOn = !!on && canSpeak(); $('#speakT').setAttribute('aria-pressed', speakOn); $('#speakT').textContent = speakOn ? '🔊' : '🔈'; store.set('speak_' + mode, speakOn); }
 $('#speakT').onclick = () => { setSpeak(!speakOn); if (!speakOn) stopSpeak(); };
 let lastSaid = '';
 function say(text) {
-  if (!window.speechSynthesis) return;
+  if (!canSpeak()) return;
   const clean = String(text).replace(/\[\[[^\]]*\]\]/g, '').replace(/\*\*/g, '').replace(/[#_>`]/g, '').trim();
   if (!clean) { afterSpeech(); return; }
   lastSaid = clean;
+  if (NATIVE) { if (mode === 'viva') $('#vivaHint').textContent = 'বট বলছে…'; NATIVE.speak(clean); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = 'bn-IN'; if (bnVoice) u.voice = bnVoice; u.rate = 0.95;
@@ -802,15 +814,29 @@ function say(text) {
   if (mode === 'viva') $('#vivaHint').textContent = 'বট বলছে…';
   speechSynthesis.speak(u);
 }
-function stopSpeak() { if (window.speechSynthesis) speechSynthesis.cancel(); }
+function stopSpeak() { if (NATIVE) NATIVE.stopSpeak(); else if (window.speechSynthesis) speechSynthesis.cancel(); }
 function afterSpeech() { if (mode === 'viva' && !$('#s-chat').hidden) $('#vivaHint').textContent = 'এবার তোমার পালা: মাইকে চাপ দিয়ে উত্তর বলো'; }
 $('#repeatB').onclick = () => { if (lastSaid) say(lastSaid); };
 
 /* ============ voice in (Bengali speech recognition, Chrome on Android) ============ */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, listening = false, heard = '';
-if (!SR) $('#micS').hidden = true;
+if (!SR && !NATIVE) $('#micS').hidden = true;
+function heardUpdate() { if (mode === 'viva') $('#vivaHint').textContent = heard ? '“' + heard + '”' : 'শুনছি…'; else txt.value = heard; }
+function listenEnded() { listening = false; micUI(false); if (mode === 'viva') { if (heard) send(heard); } else if (heard) txt.focus(); }
+// callbacks from the Android app's speech recogniser
+window.__nativeHeard = (t) => { heard = String(t || '').trim(); heardUpdate(); };
+window.__nativeListenEnd = (err) => {
+  if (err === 'perm') alertMsg('মাইক্রোফোনের অনুমতি দাও: ফোনের Settings → Apps → শিক্ষক বট → Permissions → Microphone।');
+  else if (err === 'nospeech' && mode === 'viva') $('#vivaHint').textContent = 'কিছু শুনতে পাইনি, আবার চাপ দিয়ে বলো';
+  else if (err === 'unavailable') alertMsg('এই ফোনে মুখে বলার সুবিধা চালু নেই। Google অ্যাপ আপডেট করো, বা লিখে উত্তর দাও।');
+  listenEnded();
+};
 function listen() {
+  if (NATIVE) {
+    if (listening) { NATIVE.stopListen(); return; }
+    stopSpeak(); heard = ''; listening = true; micUI(true); NATIVE.listen(); return;
+  }
   if (!SR) { alertMsg('এই ব্রাউজারে মুখে বলার সুবিধা নেই। অ্যান্ড্রয়েড ফোনে Chrome দিয়ে খোলো, বা লিখে উত্তর দাও।'); return; }
   if (listening) { rec && rec.stop(); return; }
   stopSpeak();
@@ -821,16 +847,30 @@ function listen() {
     let fin = '', inter = '';
     for (let i = 0; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) fin += r[0].transcript; else inter += r[0].transcript; }
     heard = (fin || inter).trim();
-    if (mode === 'viva') $('#vivaHint').textContent = heard ? '“' + heard + '”' : 'শুনছি…'; else txt.value = heard;
+    heardUpdate();
   };
   rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') alertMsg('মাইক্রোফোনের অনুমতি দাও: ঠিকানা-বারের পাশের 🔒 চিহ্নে চাপ দিয়ে Microphone চালু করো।'); else if (e.error === 'no-speech' && mode === 'viva') $('#vivaHint').textContent = 'কিছু শুনতে পাইনি, আবার চাপ দিয়ে বলো'; };
-  rec.onend = () => { listening = false; micUI(false); if (mode === 'viva') { if (heard) send(heard); } else if (heard) txt.focus(); };
+  rec.onend = listenEnded;
   try { rec.start(); } catch (e) {}
 }
 function micUI(on) { ['#micS', '#micV'].forEach((s) => $(s).classList.toggle('on', on)); if (mode === 'viva' && on) $('#vivaHint').textContent = 'শুনছি… বলা হলে একটু থামো'; }
 $('#micS').onclick = listen; $('#micV').onclick = listen;
 $('#typeInstead').onclick = () => { $('#vivabar').hidden = true; $('#composer').hidden = false; txt.focus(); };
-function stopAll() { stopSpeak(); if (rec && listening) rec.abort(); }
+function stopAll() { stopSpeak(); if (NATIVE) { if (listening) { NATIVE.stopListen(); listening = false; micUI(false); } } else if (rec && listening) rec.abort(); }
+
+/* ============ app: install button, offline start, phone back button ============ */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; $('#installB').hidden = false; });
+$('#installB').onclick = async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; $('#installB').hidden = true; };
+window.addEventListener('appinstalled', () => { $('#installB').hidden = true; toast('📲 অ্যাপ ফোনে রাখা হয়েছে!'); });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// Android back button inside the app: go one screen back instead of closing the app. Returns false on the first screen.
+window.appBack = () => {
+  const vis = VIEWS.find((v) => !$('#' + v).hidden);
+  if (!vis || vis === 's-home' || vis === 's-login') return false;
+  if (vis === 's-chat' && lesson) openLessons(); else goHome();
+  return true;
+};
 function alertMsg(t) { paint({ role: 'model', text: t, err: true, note: true }); }
 
 /* ============ start ============ */
