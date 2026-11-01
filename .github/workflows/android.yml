@@ -1,0 +1,317 @@
+# Builds the শিক্ষক বট Android app (APK) on GitHub's computers.
+# The app opens https://biswajitmallicksp-commits.github.io/ai-shikkhok/ inside a full-screen window and adds
+# the phone's own Bengali voice (speak + listen). Website updates reach the app without a new APK.
+# Download: https://github.com/biswajitmallicksp-commits/ai-shikkhok/releases/latest/download/shikkhok-bot.apk
+name: Build Android app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/android.yml', 'icon-512.png']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Create the Android project
+        run: |
+          set -e
+          APP=app-src
+          PKG=com.shikkhokbot.app
+          DIR=$APP/app/src/main/java/com/shikkhokbot/app
+          mkdir -p $DIR $APP/app/src/main/res/values
+          command -v convert >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick)
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            n=${d%%:*}; s=${d##*:}
+            mkdir -p $APP/app/src/main/res/mipmap-$n
+            convert icon-512.png -resize ${s}x${s} $APP/app/src/main/res/mipmap-$n/ic_launcher.png
+          done
+
+          cat > $APP/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "ShikkhokBot"
+          include ':app'
+          EOF
+
+          cat > $APP/build.gradle <<'EOF'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          EOF
+
+          cat > $APP/gradle.properties <<'EOF'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2g
+          EOF
+
+          cat > $APP/app/build.gradle <<EOF
+          plugins { id 'com.android.application' }
+          android {
+            namespace '$PKG'
+            compileSdk 34
+            defaultConfig {
+              applicationId '$PKG'
+              minSdk 24
+              targetSdk 34
+              versionCode ${GITHUB_RUN_NUMBER}
+              versionName '1.${GITHUB_RUN_NUMBER}'
+            }
+            signingConfigs {
+              if (System.getenv('KS_FILE')) {
+                release {
+                  storeFile file(System.getenv('KS_FILE'))
+                  storePassword System.getenv('KS_PASS')
+                  keyAlias System.getenv('KS_ALIAS')
+                  keyPassword System.getenv('KS_PASS')
+                }
+              }
+            }
+            lint { checkReleaseBuilds false; abortOnError false }
+            buildTypes {
+              release {
+                minifyEnabled false
+                signingConfig System.getenv('KS_FILE') ? signingConfigs.release : signingConfigs.debug
+              }
+            }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+          }
+          EOF
+
+          cat > $APP/app/src/main/res/values/strings.xml <<'EOF'
+          <resources><string name="app_name">শিক্ষক বট</string></resources>
+          EOF
+
+          cat > $APP/app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+            <queries>
+              <intent><action android:name="android.speech.RecognitionService"/></intent>
+              <intent><action android:name="android.intent.action.TTS_SERVICE"/></intent>
+            </queries>
+            <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher"
+                android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
+              <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait"
+                  android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          cat > $DIR/MainActivity.java <<'EOF'
+          package com.shikkhokbot.app;
+
+          import android.Manifest;
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.graphics.Color;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.speech.RecognitionListener;
+          import android.speech.RecognizerIntent;
+          import android.speech.SpeechRecognizer;
+          import android.speech.tts.TextToSpeech;
+          import android.speech.tts.UtteranceProgressListener;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebResourceError;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import java.util.ArrayList;
+          import java.util.Locale;
+          import org.json.JSONObject;
+
+          public class MainActivity extends Activity {
+            static final String HOME = "https://biswajitmallicksp-commits.github.io/ai-shikkhok/?source=android";
+            static final String HOST = "biswajitmallicksp-commits.github.io";
+            static final int REQ_FILE = 1, REQ_MIC = 2;
+            WebView web;
+            TextToSpeech tts;
+            boolean ttsReady = false;
+            SpeechRecognizer sr;
+            ValueCallback<Uri[]> fileCb;
+
+            @Override protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              getWindow().setStatusBarColor(Color.parseColor("#0E5C61"));
+              web = new WebView(this);
+              setContentView(web);
+              WebSettings s = web.getSettings();
+              s.setJavaScriptEnabled(true);
+              s.setDomStorageEnabled(true);
+              s.setMediaPlaybackRequiresUserGesture(false);
+              s.setUserAgentString(s.getUserAgentString() + " ShikkhokBotApp");
+              web.addJavascriptInterface(new Bridge(), "AndroidBridge");
+              web.setWebViewClient(new WebViewClient() {
+                @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                  Uri u = r.getUrl();
+                  if (HOST.equals(u.getHost())) return false;
+                  try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) {}
+                  return true;
+                }
+                @Override public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
+                  if (r.isForMainFrame()) v.loadDataWithBaseURL(null,
+                    "<html><body style='font-family:sans-serif;text-align:center;padding:60px 20px;background:#EEF2EF;color:#0E5C61'>"
+                    + "<h2>ইন্টারনেট নেই</h2><p>মোবাইল ডেটা বা Wi-Fi চালু করে আবার চেষ্টা করো।</p>"
+                    + "<button style='font-size:18px;padding:12px 24px;border:0;border-radius:12px;background:#0E5C61;color:#fff' "
+                    + "onclick=\"location.href='" + HOME + "'\">আবার চেষ্টা করো</button></body></html>", "text/html", "utf-8", null);
+                }
+              });
+              web.setWebChromeClient(new WebChromeClient() {
+                @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                  if (fileCb != null) fileCb.onReceiveValue(null);
+                  fileCb = cb;
+                  Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                  i.addCategory(Intent.CATEGORY_OPENABLE);
+                  i.setType("image/*");
+                  try { startActivityForResult(Intent.createChooser(i, "ছবি বেছে নাও"), REQ_FILE); }
+                  catch (Exception e) { fileCb = null; return false; }
+                  return true;
+                }
+                @Override public void onPermissionRequest(PermissionRequest r) { r.grant(r.getResources()); }
+              });
+              tts = new TextToSpeech(this, st -> {
+                if (st == TextToSpeech.SUCCESS) {
+                  int ok = tts.setLanguage(new Locale("bn", "IN"));
+                  if (ok < 0) tts.setLanguage(new Locale("bn"));
+                  tts.setSpeechRate(0.95f);
+                  ttsReady = true;
+                  tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String id) {}
+                    @Override public void onDone(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
+                    @Override public void onError(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
+                  });
+                }
+              });
+              if (b != null) web.restoreState(b); else web.loadUrl(HOME);
+            }
+
+            void js(String code) { runOnUiThread(() -> web.evaluateJavascript(code, null)); }
+            static String q(String t) { return JSONObject.quote(t == null ? "" : t); }
+
+            class Bridge {
+              @JavascriptInterface public void speak(String text) {
+                if (!ttsReady) { js("window.__nativeTtsDone && __nativeTtsDone()"); return; }
+                tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "u" + System.currentTimeMillis());
+              }
+              @JavascriptInterface public void stopSpeak() { if (ttsReady) tts.stop(); }
+              @JavascriptInterface public void listen() { runOnUiThread(MainActivity.this::startListening); }
+              @JavascriptInterface public void stopListen() { runOnUiThread(() -> { if (sr != null) sr.stopListening(); }); }
+            }
+
+            void startListening() {
+              if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
+                return;
+              }
+              if (!SpeechRecognizer.isRecognitionAvailable(this)) { js("__nativeListenEnd('unavailable')"); return; }
+              if (sr == null) {
+                sr = SpeechRecognizer.createSpeechRecognizer(this);
+                sr.setRecognitionListener(new RecognitionListener() {
+                  boolean done;
+                  String best(Bundle r) { ArrayList<String> a = r.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); return a != null && !a.isEmpty() ? a.get(0) : ""; }
+                  @Override public void onReadyForSpeech(Bundle p) { done = false; }
+                  @Override public void onBeginningOfSpeech() {}
+                  @Override public void onRmsChanged(float v) {}
+                  @Override public void onBufferReceived(byte[] b) {}
+                  @Override public void onEndOfSpeech() {}
+                  @Override public void onPartialResults(Bundle r) { String t = best(r); if (!t.isEmpty()) js("__nativeHeard(" + q(t) + ")"); }
+                  @Override public void onResults(Bundle r) { if (done) return; done = true; js("__nativeHeard(" + q(best(r)) + ");__nativeListenEnd('')"); }
+                  @Override public void onError(int e) {
+                    if (done) return; done = true;
+                    String c = e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ? "nospeech"
+                      : e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ? "perm" : "";
+                    js("__nativeListenEnd(" + q(c) + ")");
+                  }
+                  @Override public void onEvent(int t, Bundle p) {}
+                });
+              }
+              Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+              i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+              i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-IN");
+              i.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+              i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+              sr.startListening(i);
+            }
+
+            @Override public void onRequestPermissionsResult(int code, String[] p, int[] g) {
+              if (code != REQ_MIC) return;
+              if (g.length > 0 && g[0] == PackageManager.PERMISSION_GRANTED) startListening();
+              else js("__nativeListenEnd('perm')");
+            }
+
+            @Override protected void onActivityResult(int code, int res, Intent data) {
+              if (code == REQ_FILE && fileCb != null) {
+                Uri[] r = null;
+                if (res == RESULT_OK && data != null && data.getData() != null) r = new Uri[]{data.getData()};
+                fileCb.onReceiveValue(r);
+                fileCb = null;
+              } else super.onActivityResult(code, res, data);
+            }
+
+            @Override public void onBackPressed() {
+              web.evaluateJavascript("window.appBack ? appBack() : false", v -> {
+                if (!"true".equals(v)) { if (web.canGoBack()) web.goBack(); else finish(); }
+              });
+            }
+
+            @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); web.saveState(o); }
+            @Override protected void onPause() { super.onPause(); if (ttsReady) tts.stop(); }
+            @Override protected void onDestroy() { if (tts != null) tts.shutdown(); if (sr != null) sr.destroy(); web.destroy(); super.onDestroy(); }
+          }
+          EOF
+
+      - name: Prepare the signing key
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > $RUNNER_TEMP/release.jks; echo "KS_FILE=$RUNNER_TEMP/release.jks" >> $GITHUB_ENV; fi
+
+      - name: Build the APK
+        working-directory: app-src
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: shikkhok
+        run: |
+          gradle assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../shikkhok-bot.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shikkhok-bot-apk
+          path: shikkhok-bot.apk
+
+      - name: Publish the download link
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ github.run_number }}
+          name: শিক্ষক বট অ্যাপ (সংস্করণ ${{ github.run_number }})
+          body: |
+            ফোনে শিক্ষক বট অ্যাপ বসাতে নিচের **shikkhok-bot.apk** ফাইলটা ডাউনলোড করে খোলো।
+            প্রথমবার ফোন জিজ্ঞেস করলে “এই উৎস থেকে অ্যাপ ইনস্টলের অনুমতি” দাও।
+          files: shikkhok-bot.apk
+          make_latest: true
