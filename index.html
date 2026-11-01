@@ -88,6 +88,31 @@ input,textarea{font:inherit;color:inherit}
 .msg.bot.lend{align-self:stretch;max-width:100%;background:color-mix(in srgb,var(--ok) 12%,var(--bot));border:1.5px solid var(--ok)}
 .lbtns{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:10px}
 .lbtns .btn{width:100%}
+.tabs{flex:none;display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1.5px solid var(--line);background:var(--surface);color:inherit;border-radius:999px;padding:6px 14px;font:inherit;font-weight:600;font-size:15px}
+.tab.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.qa{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.qa>summary{cursor:pointer;font-weight:600;line-height:1.45;list-style:none}
+.qa>summary::-webkit-details-marker{display:none}
+.qa>summary::before{content:'▸ ';color:var(--accent)}
+.qa[open]>summary::before{content:'▾ '}
+.qa .yrs{display:inline-block;font-size:12.5px;font-weight:700;color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:99px;padding:1px 8px;margin-left:4px}
+.ans{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;line-height:1.6}
+.ans h3{font-family:var(--f-display);font-size:18px;color:var(--accent);margin:14px 0 4px}
+.ans h3:first-child{margin-top:0}
+.ans p{margin:4px 0}
+.ans .hook{background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:10px;padding:6px 10px;margin-top:6px}
+.ans .fig{max-width:340px}
+.dtab{width:100%;border-collapse:collapse;font-size:15px}
+.dtab th,.dtab td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+.dtab th{background:var(--sunk)}
+.opts{display:grid;gap:6px;margin-top:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--surface);color:inherit;border-radius:10px;padding:8px 12px;font:inherit}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.opt.no{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.why{font-size:14.5px;color:var(--muted);margin-top:6px}
+.tip{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:12px;padding:10px 12px;font-size:15px;line-height:1.5}
 .pill{font-size:12.5px;font-weight:700;border-radius:99px;padding:1px 9px;background:var(--gold);color:#fff;align-self:flex-start}
 .badges{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .bdg{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-size:11.5px;line-height:1.25;color:var(--muted)}
@@ -226,6 +251,7 @@ input,textarea{font:inherit;color:inherit}
       <div class="modes">
         <button class="mode wide" id="goWorld"><span class="ic" style="font-size:34px">🌏</span><span class="grow"><b>আমার জগৎ</b><span id="worldLine">তোমার বাড়ি, রাস্তা, প্রিয় মানুষ, গান, আইডল লেখো। বট এগুলো দিয়েই মনে রাখাবে।</span><span class="bar"><i id="worldBar" style="width:0"></i></span></span></button>
         <button class="mode wide" id="goDeck"><span class="ic" style="font-size:34px">🃏</span><span class="grow"><b>স্মৃতি-কার্ড খেলা</b><span id="deckLine">বটের বানানো কার্ড এখানে জমবে, ১-৩-৭-২১ দিনে ফিরে আসবে।</span></span><span class="pill" id="deckDue" hidden>০</span></button>
+        <button class="mode wide" id="goBank"><span class="ic" style="font-size:34px">📚</span><span class="grow"><b>প্রশ্নব্যাংক</b><span>১, ২, ৩ ও ৫ নম্বরের সব প্রশ্ন, মডেল উত্তর আর ছবি</span></span></button>
         <button class="mode" data-mode="viva"><span class="ic">🎙️</span><b>মৌখিক</b><span>মুখে বলে উত্তর</span></button>
         <button class="mode" data-mode="practice"><span class="ic">✍️</span><b>অনুশীলন</b><span>লিখে উত্তর, সঙ্গে সঙ্গে শেখা</span></button>
         <button class="mode" data-mode="test"><span class="ic">📝</span><b>পরীক্ষা</b><span>১০ প্রশ্ন, শেষে রিপোর্ট</span></button>
@@ -276,6 +302,15 @@ input,textarea{font:inherit;color:inherit}
       <h1>শেখো · পাঠ-যাত্রা<small id="lessonsSub">০ / ১৪ পাঠ শেষ</small></h1>
     </div>
     <div class="scroll pad" id="lessonsBody"></div>
+  </section>
+
+  <!-- QUESTION BANK -->
+  <section class="screen" id="s-bank" hidden>
+    <div class="top pad">
+      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
+      <h1>প্রশ্নব্যাংক<small>মাধ্যমিক ভূগোল · প্রথম অধ্যায়</small></h1>
+    </div>
+    <div class="scroll pad" id="bankBody"></div>
   </section>
 
   <!-- MY WORLD -->
@@ -379,7 +414,7 @@ let busy = false;
 const K = (k) => k + '_' + (me ? me.roll : '');   // per-student storage keys
 let lesson = 0;                      // current lesson number in "শেখো" (0 = not a lesson chat)
 const chatKey = () => K('chat_' + mode + (mode === 'learn' && lesson ? '_L' + lesson : ''));
-const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck', 's-lessons'];
+const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck', 's-lessons', 's-bank'];
 function show(id) { VIEWS.forEach((s) => { $('#' + s).hidden = s !== id; }); }
 document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => goHome()));
 
@@ -530,7 +565,7 @@ function renderHud() {
   $('#worldLine').textContent = p ? `${bn(p)}% ভরা · ${bn(world.learned.length)}টি নতুন নোঙর। যত ভরবে, তত সহজে মনে থাকবে।` : 'তোমার বাড়ি, রাস্তা, প্রিয় মানুষ, গান, আইডল লেখো। বট এগুলো দিয়েই মনে রাখাবে।';
   const due = dueCards().length;
   $('#deckDue').hidden = !due; $('#deckDue').textContent = bn(due) + 'টি বাকি';
-  $('#deckLine').textContent = deck.length ? `${bn(deck.length)}টি কার্ড। আজ রিভিশন: ${bn(due)}টি।` : 'বটের বানানো কার্ড এখানে জমবে, ১-৩-৭-২১ দিনে ফিরে আসবে।';
+  $('#deckLine').textContent = deck.length ? `${bn(deck.length)}টি কার্ড। আজ রিভিশন: ${bn(due)}টি।` : 'পুরো অধ্যায়ের কার্ড + বটের বানানো কার্ড, ১-৩-৭-২১ দিনে ফিরে আসবে।';
 }
 const gameText = () => { const i = levelOf(game.xp), n = LEVELS[i + 1]; return `লেভেল ${i + 1} (${LEVELS[i][0]}), ${game.xp} XP${n ? `, পরের লেভেল ${n[0]} আর ${n[1] - game.xp} XP দূরে` : ''}, স্ট্রিক ${streak()} দিন, কার্ড ${deck.length}টি`; };
 
@@ -560,7 +595,7 @@ function openDeck() { stopAll(); show('s-deck'); revQ = dueCards(); revI = 0; re
 function renderDeck() {
   $('#deckSub').textContent = bn(deck.length) + 'টি কার্ড · আজ ' + bn(dueCards().length) + 'টি';
   const b = $('#deckBody');
-  if (!deck.length) { b.innerHTML = `<div class="card"><h2>এখনো কোনো কার্ড নেই</h2><p class="small" style="margin:0">অনুশীলন বা মৌখিকে বট যখন তোমার চেনা জিনিস দিয়ে কিছু মনে রাখাবে, সেটা এখানে কার্ড হয়ে জমবে।</p></div>`; return; }
+  if (!deck.length) { b.innerHTML = `<div class="card"><h2>কার্ড লোড হচ্ছে…</h2><p class="small" style="margin:0">ইন্টারনেট চালু রেখে একটু পরে আবার খোলো। পুরো অধ্যায়ের ৭০টির বেশি কার্ড আসবে, আর বট তোমার জন্য নতুন কার্ড বানালে সেগুলোও এখানে জমবে।</p></div>`; seedDeck().then((n) => { if (n && !$('#s-deck').hidden) openDeck(); }); return; }
   const c = revQ[revI];
   if (c) {
     b.innerHTML = `<div class="rev"><div class="small">কার্ড ${bn(revI + 1)} / ${bn(revQ.length)} · আগে মনে মনে উত্তর বলো, তারপর উল্টাও</div>${cardHTML(c, revFlip)}` +
@@ -568,7 +603,8 @@ function renderDeck() {
     return;
   }
   b.innerHTML = `<div class="card"><h2>${revQ.length ? 'আজকের রিভিশন শেষ! 🎉' : 'আজ কোনো কার্ড বাকি নেই'}</h2><p class="small" style="margin:0">পরের রিভিশন যেদিন আসবে, এখানে দেখাবে।</p></div>` +
-    deck.slice().reverse().map((x) => `<details class="card"><summary><b>${esc(x.term || 'কার্ড')}</b> <span class="small">· বাক্স ${bn(x.box)} · ${x.due <= today() ? 'আজ' : bn(x.due.slice(5).split('-').reverse().join('/'))}</span></summary>${cardHTML(x, true)}</details>`).join('');
+    `<p class="small" style="margin:0">সব কার্ড: ${bn(deck.filter((x) => !x.builtin).length)}টি বটের বানানো (তোমার জন্য) + ${bn(deck.filter((x) => x.builtin).length)}টি পুরো অধ্যায়ের। রোজ কয়েকটা করে রিভিশনে আসবে।</p>` +
+    deck.slice().sort((a, b) => (a.builtin ? 1 : 0) - (b.builtin ? 1 : 0)).map((x) => `<details class="card"><summary><b>${esc(x.term || 'কার্ড')}</b> <span class="small">· বাক্স ${bn(x.box)} · ${x.due <= today() ? 'আজ' : bn(x.due.slice(5).split('-').reverse().join('/'))}</span></summary>${cardHTML(x, true)}</details>`).join('');
 }
 $('#deckBody').addEventListener('click', (e) => {
   if (e.target.closest('[data-flip]')) { revFlip = true; renderDeck(); return; }
@@ -640,6 +676,96 @@ $('#log').addEventListener('click', (e) => {
   if (g === 'map') openLessons(); else if (g === 'test') openChat('test'); else openChat('learn', Number(g));
 });
 
+/* ============ প্রশ্নব্যাংক + built-in memory cards (data: bank.json, made from the chapter notes) ============ */
+let BANK = null;
+async function loadBank() {
+  if (BANK) return BANK;
+  const r = await fetch('bank.json', { cache: 'no-cache' });
+  if (!r.ok) throw new Error('bank');
+  BANK = await r.json(); return BANK;
+}
+// Adds the whole chapter as memory cards once (about 8 new cards a day, so the daily revision stays small).
+async function seedDeck() {
+  if (store.get(K('seeded1'), false)) return 0;
+  let d; try { d = await loadBank(); } catch (e) { return 0; }
+  const cards = [];
+  d.lf.forEach((x) => cards.push({ term: x.n, front: `**${x.n}** কী? কীভাবে তৈরি হয়? (শক্তি: ${x.s}, কাজ: ${x.k})`, back: `**সংজ্ঞা:** ${x.d}\n**উৎপত্তি:** ${x.o}\n**উদাহরণ:** ${x.e}` + (x.h ? `\n💡 ${x.h}` : ''), figure: x.f }));
+  d.mn.forEach((x) => cards.push({ term: x.t, front: `মনে রাখার বাক্য: **${x.t}**`, back: `“${x.p}”` + (x.m ? `\n${x.m}` : '') }));
+  d.rc.filter((x) => x.v).forEach((x) => cards.push({ term: x.k, front: `**${x.k}** কোনটি / কত?`, back: x.v }));
+  const have = new Set(deck.map((c) => c.term));
+  let i = 0;
+  cards.forEach((c) => { if (have.has(c.term)) return; deck.push(Object.assign({ id: 'b' + i, box: 1, due: addDays(today(), Math.floor(i / 8)), builtin: 1 }, c)); i++; });
+  saveDeck(); store.set(K('seeded1'), true);
+  return i;
+}
+let bankTab = 'l5';
+const BANK_TABS = [['l5', '৫ নম্বর'], ['d3', '৩ নম্বর'], ['s2', '২ নম্বর'], ['one', '১ নম্বর'], ['lf', 'সব ভূমিরূপ'], ['mn', 'মনে রাখো'], ['rc', 'সংখ্যা ও রেকর্ড']];
+async function openBank(tab) {
+  stopAll(); show('s-bank'); if (tab) bankTab = tab;
+  const b = $('#bankBody');
+  if (!BANK) b.innerHTML = '<p class="small">লোড হচ্ছে…</p>';
+  try { await loadBank(); } catch (e) { b.innerHTML = '<div class="card">প্রশ্নব্যাংক খুলতে ইন্টারনেট লাগবে। একবার খুললে পরে ইন্টারনেট ছাড়াও খুলবে।</div>'; return; }
+  renderBank();
+}
+const lfByName = (n) => BANK.lf.find((x) => x.n === n);
+function lfHTML(x, label) {
+  if (!x) return '';
+  return `<h3>${label ? label + ' ' : ''}${esc(x.n)}${x.en ? ` <span class="small">(${esc(x.en)})</span>` : ''}</h3>${fig(x.f)}` +
+    `<p><b>সংজ্ঞা:</b> ${esc(x.d)}</p><p><b>উৎপত্তি:</b> ${esc(x.o)}</p><p><b>উদাহরণ:</b> ${esc(x.e)}</p>` + (x.h ? `<p class="hook">💡 ${esc(x.h)}</p>` : '');
+}
+const KA = ['(ক)', '(খ)', '(গ)', '(ঘ)', '(ঙ)'];
+const practiceBtn = (q, m) => `<button class="linkbtn" data-practice="${esc(q)}" data-marks="${m}">✍️ নিজে উত্তর লিখে দেখাও, বট ${bn(m)} নম্বরে মূল্যায়ন করবে</button>`;
+function renderBank() {
+  const d = BANK, t = bankTab;
+  let h = `<div class="tabs">${BANK_TABS.map(([k, v]) => `<button class="tab${k === t ? ' on' : ''}" data-tab="${k}">${v}</button>`).join('')}</div>`;
+  if (t === 'l5') {
+    h += `<div class="tip">৫ নম্বরের উত্তরে প্রতিটি ভূমিরূপের জন্য লেখো: <b>সংজ্ঞা → উৎপত্তি → বৈশিষ্ট্য ও উদাহরণ → পরিষ্কার চিত্র</b>। চিত্রে নাম লিখতে ভুলো না।</div>`;
+    h += d.l5.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.q)}${q.y ? `<span class="yrs">মাধ্যমিকে: ${esc(q.y)}</span>` : ''}</summary><div class="ans">` +
+      (q.lf.length ? q.lf.map((n, j) => lfHTML(lfByName(n), KA[j])).join('') : '') +
+      (q.t.length ? q.t.map((l) => /^[-•]/.test(l) ? `<p>• ${esc(l.replace(/^[-•]\s*/, ''))}</p>` : `<h3>${esc(l)}</h3>`).join('') : '') +
+      (q.alt ? `<details style="margin-top:10px"><summary class="small"><b>এগুলোর বদলেও লেখা যায়: ${esc(q.alt)}</b></summary>${q.alt.split(/,\s*/).map((n) => lfHTML(lfByName(n.trim()))).join('')}</details>` : '') +
+      `<p style="margin-top:12px">${practiceBtn(q.q, 5)}</p></div></details>`).join('');
+  } else if (t === 'd3') {
+    h += `<div class="tip">৩ নম্বরের পার্থক্যে অন্তত ৩টি ভিত্তি লাগবে, প্রতিটিতে ১ নম্বর। টেবিল করে লিখলে পরীক্ষক সহজে নম্বর দেন।</div>`;
+    h += d.d3.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.A)} ও ${esc(q.B)}-এর পার্থক্য লেখো।</summary><div class="ans">` +
+      `<table class="dtab"><tr><th>ভিত্তি</th><th>${esc(q.A)}</th><th>${esc(q.B)}</th></tr>${q.r.map((r) => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</table>` +
+      `<p style="margin-top:10px">${practiceBtn(q.A + ' ও ' + q.B + '-এর পার্থক্য লেখো।', 3)}</p></div></details>`).join('');
+  } else if (t === 's2') {
+    h += d.s2.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.q)}</summary><div class="ans"><p>${esc(q.a)}</p><p>${practiceBtn(q.q, 2)}</p></div></details>`).join('');
+  } else if (t === 'one') {
+    h += `<div class="card"><h2>MCQ: সঠিক উত্তরে চাপ দাও</h2></div>` + d.mcq.map((q, i) => `<div class="qa" data-mcq="${i}"><b>${bn(i + 1)}. ${esc(q.q)}</b><div class="opts">${q.o.map((o) => `<button class="opt" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div><div class="why" hidden></div></div>`).join('');
+    h += `<div class="card"><h2>শূন্যস্থান পূরণ</h2></div>` + d.fill.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.q)}</summary><div class="ans"><b>${esc(q.a)}</b>${q.w ? `<div class="why">${esc(q.w)}</div>` : ''}</div></details>`).join('');
+    h += `<div class="card"><h2>সত্য না মিথ্যা?</h2></div>` + d.tf.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.q)}</summary><div class="ans"><b>${esc(q.a)}</b>${q.w ? `<div class="why">${esc(q.w)}</div>` : ''}</div></details>`).join('');
+    if (d.match) h += `<div class="card"><h2>বাম দিকের সঙ্গে ডান দিক মেলাও</h2><div class="chips" style="margin-top:6px">${d.match.split(';').map((x) => `<span class="chip">${esc(x.trim())}</span>`).join('')}</div></div>`;
+  } else if (t === 'lf') {
+    h += d.lf.map((x) => `<details class="qa"><summary>${esc(x.n)} <span class="small">· ${esc(x.s)}, ${esc(x.k)}</span></summary><div class="ans">${lfHTML(x)}</div></details>`).join('');
+  } else if (t === 'mn') {
+    h += d.mn.map((x) => `<div class="qa"><b>${esc(x.t)}</b><p style="margin:6px 0 0;font-size:18px">“${esc(x.p)}”</p>${x.m ? `<div class="why">${esc(x.m)}</div>` : ''}</div>`).join('');
+  } else if (t === 'rc') {
+    h += `<table class="dtab">${d.rc.filter((x) => x.v).map((x) => `<tr><td>${esc(x.k)}</td><td><b>${esc(x.v)}</b></td></tr>`).join('')}</table>`;
+  }
+  const body = $('#bankBody'); body.innerHTML = h; body.scrollTop = 0;
+}
+$('#goBank').onclick = () => openBank();
+$('#bankBody').addEventListener('click', (e) => {
+  const tb = e.target.closest('[data-tab]'); if (tb) { bankTab = tb.dataset.tab; renderBank(); return; }
+  const o = e.target.closest('.opt');
+  if (o) {
+    const box = o.closest('[data-mcq]'), q = BANK.mcq[+box.dataset.mcq];
+    box.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (x.dataset.o === q.a) x.classList.add('ok'); });
+    if (o.dataset.o !== q.a) o.classList.add('no'); else addXp(2);
+    const w = box.querySelector('.why'); w.hidden = false; w.textContent = (o.dataset.o === q.a ? '✓ ঠিক! ' : '✗ সঠিক উত্তর: ' + q.a + '। ') + (q.w || '');
+    return;
+  }
+  const p = e.target.closest('[data-practice]');
+  if (p) askFromBank(p.dataset.practice, +p.dataset.marks);
+});
+function askFromBank(q, marks) {
+  const msg = `[প্রশ্নব্যাংক] এই ${bn(marks)} নম্বরের প্রশ্নটা আমাকে করো: "${q}"। আমি নিজে উত্তর লিখব। তারপর মাধ্যমিকের মতো ${bn(marks)} নম্বরে মূল্যায়ন করবে, কী বাদ গেল বলবে আর মনে রাখার কৌশল দেবে।`;
+  nextStart = msg; openChat('practice');
+  if (nextStart) { nextStart = null; send(msg, true); }
+}
+
 /* ============ server ============ */
 async function call(body) {
   const url = api();
@@ -665,7 +791,7 @@ $('#loginForm').addEventListener('submit', (e) => {
   me = { name, roll, code, school }; store.set('me', me); err.hidden = true; boot();
 });
 $('#logout').onclick = () => { store.del('me'); me = null; show('s-login'); };
-function boot() { loadWorld(); loadGame(); loadDeck(); goHome(); }
+function boot() { loadWorld(); loadGame(); loadDeck(); goHome(); seedDeck().then((n) => { if (n && !$('#s-home').hidden) renderHud(); }); }
 async function goHome() {
   stopAll(); show('s-home');
   $('#hello').textContent = 'নমস্কার, ' + me.name.split(' ')[0] + '!';
@@ -704,8 +830,10 @@ function openChat(m, n) {
   const last = store.get(chatKey() + '_at', 0);
   if (lesson && Date.now() - last > 3 * 3600 * 1000 && hist[hist.length - 1].role === 'model') send('[ফিরে এলাম] কিছুক্ষণ বিরতির পর আবার এই পাঠে ফিরলাম। এই পাঠে আগে যা শিখেছি তা ২ লাইনে মনে করিয়ে দাও, তারপর যেখানে থেমেছিলাম সেখান থেকে চালাও।', true);
 }
+let nextStart = null;   // a question chosen in প্রশ্নব্যাংক, used instead of the normal greeting
 function start() {
   hist = []; $('#log').innerHTML = '';
+  if (nextStart) { const m = nextStart; nextStart = null; send(m, true); return; }
   const thin = worldPct() < 30 ? ' (আমার জগৎ এখনো প্রায় খালি)' : '';
   if (lesson) {
     send(`[শুরু] মোড: learn, পাঠ ${lesson}: ${LESSONS[lesson - 1][1]}. আমার নাম ${me.name}${thin}। আমাকে স্বাগত জানাও, আজকের পাঠে কী কী শিখব এক লাইনে বলো, তারপর শুরু করো।`, true);
