@@ -121,6 +121,8 @@ jobs:
           package com.shikkhokbot.app;
 
           import android.Manifest;
+          import android.content.ActivityNotFoundException;
+          import android.media.AudioManager;
           import android.app.Activity;
           import android.content.Intent;
           import android.content.pm.PackageManager;
@@ -148,10 +150,10 @@ jobs:
           public class MainActivity extends Activity {
             static final String HOME = "https://biswajitmallicksp-commits.github.io/ai-shikkhok/?source=android";
             static final String HOST = "biswajitmallicksp-commits.github.io";
-            static final int REQ_FILE = 1, REQ_MIC = 2;
+            static final int REQ_FILE = 1, REQ_MIC = 2, REQ_SPEECH = 3;
             WebView web;
             TextToSpeech tts;
-            boolean ttsReady = false;
+            boolean ttsReady = false, bnOk = false, askedVoice = false;
             SpeechRecognizer sr;
             ValueCallback<Uri[]> fileCb;
 
@@ -194,33 +196,64 @@ jobs:
                 }
                 @Override public void onPermissionRequest(PermissionRequest r) { r.grant(r.getResources()); }
               });
-              tts = new TextToSpeech(this, st -> {
-                if (st == TextToSpeech.SUCCESS) {
-                  int ok = tts.setLanguage(new Locale("bn", "IN"));
-                  if (ok < 0) tts.setLanguage(new Locale("bn"));
-                  tts.setSpeechRate(0.95f);
-                  ttsReady = true;
-                  tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String id) {}
-                    @Override public void onDone(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
-                    @Override public void onError(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
-                  });
-                }
-              });
+              initTts("com.google.android.tts");
               if (b != null) web.restoreState(b); else web.loadUrl(HOME);
             }
 
             void js(String code) { runOnUiThread(() -> web.evaluateJavascript(code, null)); }
+            void notice(String m) { js("window.__nativeNotice && __nativeNotice(" + q(m) + ")"); }
+
+            // Text-to-speech: Google's engine first (it has the Bengali voice), the phone's default engine if Google's is missing.
+            void initTts(String engine) {
+              tts = new TextToSpeech(this, st -> {
+                if (st != TextToSpeech.SUCCESS) { if (engine != null) initTts(null); return; }
+                int r = tts.setLanguage(new Locale("bn", "IN"));
+                if (r < 0) r = tts.setLanguage(new Locale("bn"));
+                bnOk = r >= 0;
+                tts.setSpeechRate(0.95f);
+                tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                  @Override public void onStart(String id) {}
+                  @Override public void onDone(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
+                  @Override public void onError(String id) { js("window.__nativeTtsDone && __nativeTtsDone()"); }
+                });
+                ttsReady = true;
+              }, engine);
+            }
             static String q(String t) { return JSONObject.quote(t == null ? "" : t); }
 
             class Bridge {
-              @JavascriptInterface public void speak(String text) {
-                if (!ttsReady) { js("window.__nativeTtsDone && __nativeTtsDone()"); return; }
-                tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "u" + System.currentTimeMillis());
-              }
+              @JavascriptInterface public void speak(String text) { runOnUiThread(() -> doSpeak(text)); }
               @JavascriptInterface public void stopSpeak() { if (ttsReady) tts.stop(); }
-              @JavascriptInterface public void listen() { runOnUiThread(MainActivity.this::startListening); }
+              @JavascriptInterface public void listen() { runOnUiThread(MainActivity.this::voiceTyping); }
+              @JavascriptInterface public String status() { return "tts=" + ttsReady + ",bn=" + bnOk; }
               @JavascriptInterface public void stopListen() { runOnUiThread(() -> { if (sr != null) sr.stopListening(); }); }
+            }
+
+            void doSpeak(String text) {
+              if (!ttsReady) { notice("কথা বলার ভয়েস চালু হচ্ছে, কয়েক সেকেন্ড পরে আবার চাপো।"); js("window.__nativeTtsDone && __nativeTtsDone()"); return; }
+              if (!bnOk) {
+                notice("ফোনে বাংলা ভয়েস নেই। Settings → Text-to-speech → Google Speech Services → Install voice data → বাংলা (ভারত) ডাউনলোড করো।");
+                if (!askedVoice) { askedVoice = true; try { startActivity(new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)); } catch (Exception e) {} }
+                js("window.__nativeTtsDone && __nativeTtsDone()"); return;
+              }
+              AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+              if (am != null && am.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) notice("ফোনের ভলিউম বন্ধ। ভলিউম বোতাম চেপে আওয়াজ বাড়াও।");
+              Bundle p = new Bundle();
+              p.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+              int r = tts.speak(text, TextToSpeech.QUEUE_FLUSH, p, "u" + System.currentTimeMillis());
+              if (r != TextToSpeech.SUCCESS) { notice("ভয়েস চালানো গেল না। Google Speech Services অ্যাপটা আপডেট করো।"); js("window.__nativeTtsDone && __nativeTtsDone()"); }
+            }
+
+            // Voice input: Google's own voice-typing popup (works on almost every phone, needs no extra permission).
+            void voiceTyping() {
+              Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+              i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+              i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-IN");
+              i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "bn-IN");
+              i.putExtra(RecognizerIntent.EXTRA_PROMPT, "বাংলায় উত্তর বলো…");
+              i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+              try { startActivityForResult(i, REQ_SPEECH); }
+              catch (ActivityNotFoundException e) { startListening(); }
             }
 
             void startListening() {
@@ -245,6 +278,7 @@ jobs:
                     if (done) return; done = true;
                     String c = e == SpeechRecognizer.ERROR_NO_MATCH || e == SpeechRecognizer.ERROR_SPEECH_TIMEOUT ? "nospeech"
                       : e == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ? "perm" : "";
+                  if (c.isEmpty()) notice("মুখে বলা কাজ করল না (কোড " + e + ")। ইন্টারনেট দেখো, Google অ্যাপ আপডেট করো, বা লিখে উত্তর দাও।");
                     js("__nativeListenEnd(" + q(c) + ")");
                   }
                   @Override public void onEvent(int t, Bundle p) {}
@@ -265,6 +299,12 @@ jobs:
             }
 
             @Override protected void onActivityResult(int code, int res, Intent data) {
+              if (code == REQ_SPEECH) {
+                ArrayList<String> a = data == null ? null : data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                String t = (res == RESULT_OK && a != null && !a.isEmpty()) ? a.get(0) : "";
+                js("__nativeHeard(" + q(t) + ");__nativeListenEnd(" + q(t.isEmpty() ? "nospeech" : "") + ")");
+                return;
+              }
               if (code == REQ_FILE && fileCb != null) {
                 Uri[] r = null;
                 if (res == RESULT_OK && data != null && data.getData() != null) r = new Uri[]{data.getData()};
