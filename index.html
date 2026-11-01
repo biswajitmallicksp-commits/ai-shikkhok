@@ -175,11 +175,12 @@ input,textarea{font:inherit;color:inherit}
       </div>
       <form id="loginForm" style="display:flex;flex-direction:column;gap:14px" novalidate>
         <div class="field"><label for="inName">তোমার নাম (ডাকনাম চলবে)</label><input id="inName" autocomplete="given-name" placeholder="যেমন: রিয়া" required></div>
+        <div class="field"><label for="inSchool">স্কুলের নাম</label><input id="inSchool" autocomplete="organization" placeholder="যেমন: হিন্দু স্কুল, কলকাতা" required></div>
         <div class="field"><label for="inRoll">রোল নম্বর</label><input id="inRoll" inputmode="numeric" placeholder="যেমন: 12" required></div>
         <div class="field"><label for="inCode">ক্লাস কোড</label><input id="inCode" autocapitalize="characters" placeholder="শিক্ষকের দেওয়া কোড"></div>
         <p class="err" id="loginErr" hidden></p>
         <button class="btn" type="submit">শুরু করো</button>
-        <p class="small">শিক্ষকের খাতায় শুধু নাম, রোল আর উত্তরের নম্বর জমা থাকে। “আমার জগৎ”-এ যা লিখবে, তা থাকে শুধু তোমার ফোনে।</p>
+        <p class="small">শিক্ষকের খাতায় শুধু নাম, স্কুল, রোল আর উত্তরের নম্বর জমা থাকে। “আমার জগৎ”-এ যা লিখবে, তা থাকে শুধু তোমার ফোনে।</p>
       </form>
     </div>
   </section>
@@ -551,7 +552,12 @@ $('#goDeck').onclick = openDeck;
 async function call(body) {
   const url = api();
   if (!url || url.indexOf('PASTE_') === 0) throw new Error('সার্ভারের লিংক বসানো হয়নি। শিক্ষককে জানাও (index.html-এ API_URL)।');
-  const res = await fetch(url, { method: 'POST', body: JSON.stringify(Object.assign({ code: me.code, student: { name: me.name, roll: me.roll } }, body)) });
+  // give up after 60 seconds so a stuck reply never leaves the student waiting forever
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);
+  let res;
+  try { res = await fetch(url, { method: 'POST', signal: ctl.signal, body: JSON.stringify(Object.assign({ code: me.code, student: { name: me.name, roll: me.roll, school: me.school || '' } }, body)) }); }
+  catch (e) { throw new Error(e.name === 'AbortError' ? 'বট এখন খুব ব্যস্ত। “আবার চেষ্টা করো” চাপো।' : 'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করো।'); }
+  finally { clearTimeout(timer); }
   if (!res.ok) throw new Error('সার্ভার সাড়া দিচ্ছে না (' + res.status + ')। ইন্টারনেট দেখে আবার চেষ্টা করো।');
   const data = await res.json();
   if (data.error) throw new Error(data.error);
@@ -561,10 +567,10 @@ async function call(body) {
 /* ============ login / home ============ */
 $('#loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const name = $('#inName').value.trim(), roll = $('#inRoll').value.trim(), code = $('#inCode').value.trim();
+  const name = $('#inName').value.trim(), roll = $('#inRoll').value.trim(), code = $('#inCode').value.trim(), school = $('#inSchool').value.trim();
   const err = $('#loginErr');
-  if (!name || !roll) { err.textContent = 'নাম আর রোল নম্বর দুটোই লেখো।'; err.hidden = false; return; }
-  me = { name, roll, code }; store.set('me', me); err.hidden = true; boot();
+  if (!name || !school || !roll) { err.textContent = 'নাম, স্কুলের নাম আর রোল নম্বর তিনটেই লেখো।'; err.hidden = false; return; }
+  me = { name, roll, code, school }; store.set('me', me); err.hidden = true; boot();
 });
 $('#logout').onclick = () => { store.del('me'); me = null; show('s-login'); };
 function boot() { loadWorld(); loadGame(); loadDeck(); goHome(); }
@@ -639,7 +645,7 @@ async function send(text, hidden) {
 async function ask() {
   busy = true; typing(true); $('#sendB').disabled = true;
   try {
-    const out = await call({ action: 'chat', mode, world: worldText(), game: gameText(), history: hist.filter((x) => !x.err).map((x) => ({ role: x.role, text: x.text })) });
+    const out = await call({ action: 'chat', mode, world: worldText(), game: gameText(), history: hist.filter((x) => !x.err).slice(-16).map((x) => ({ role: x.role, text: x.text })) });
     const m = { role: 'model', text: out.reply || '…', a: out.assessment, tech: out.technique };
     if (out.memory_card) { m.card = out.memory_card; addCard(out.memory_card); }
     const anc = out.new_anchor || (out.nickname ? { term: out.nickname.term, hook: out.nickname.nickname + (out.nickname.why ? ': ' + out.nickname.why : '') } : null);
@@ -729,7 +735,9 @@ function stopAll() { stopSpeak(); if (rec && listening) rec.abort(); }
 function alertMsg(t) { paint({ role: 'model', text: t, err: true, note: true }); }
 
 /* ============ start ============ */
-if (me) boot(); else show('s-login');
+// students who logged in before the school box existed are asked once for their school
+if (me && me.school) boot();
+else { if (me) { $('#inName').value = me.name || ''; $('#inRoll').value = me.roll || ''; $('#inCode').value = me.code || ''; } show('s-login'); }
 </script>
 </body>
 </html>
