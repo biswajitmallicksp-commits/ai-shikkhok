@@ -205,6 +205,20 @@ input,textarea{font:inherit;color:inherit}
 .fig .A{fill:none;stroke:var(--ink);stroke-width:1.4;marker-end:url(#ah)}
 .fig text{font-family:var(--f-body);font-size:10px;font-weight:700;fill:var(--ink)}
 .fig .bgc{fill:var(--sunk)}
+.studyframe{flex:1;min-height:0;width:100%;border:0;background:var(--bg)}
+.mode.hero{background:var(--accent);border-color:var(--accent)}
+.mode.hero b,.mode.hero span{color:var(--accent-ink)}
+.mode.hero .grow>span{opacity:.9}
+.chbar{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--accent);color:#fff;border:0;border-radius:16px;padding:10px 14px;font:inherit;cursor:pointer}
+.chbar .grow{flex:1;min-width:0}
+.chbar b{font-family:var(--f-display);font-size:18px;display:block;line-height:1.25}
+.chbar small{opacity:.85;font-size:13px}
+.chbar .sw{background:rgba(255,255,255,.2);border-radius:999px;padding:4px 10px;font-size:13px;white-space:nowrap}
+.subj{font-family:var(--f-display);font-size:18px;color:var(--accent);margin:6px 0 0}
+.pic{width:100%;max-width:520px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);display:block;margin:8px 0}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mgrid figure{margin:0}.mgrid .pic{margin:0 0 4px}.mgrid figcaption{font-size:13px;color:var(--muted)}
+.vid{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000;margin-top:6px}.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -218,7 +232,7 @@ input,textarea{font:inherit;color:inherit}
     <div class="scroll pad">
       <div>
         <p class="brand">শিক্ষক বট</p>
-        <p class="lead">মাধ্যমিক ভূগোল · প্রথম অধ্যায়। আমি প্রশ্ন করব, তুমি বলবে বা লিখবে। যেটা আটকাবে, সেটা তোমার নিজের চেনা জিনিসের সঙ্গে জুড়ে মনে রাখিয়ে দেব।</p>
+        <p class="lead">মাধ্যমিকের পড়া, অধ্যায় ধরে ধরে। আমি প্রশ্ন করব, তুমি বলবে বা লিখবে। যেটা আটকাবে, সেটা তোমার নিজের চেনা জিনিসের সঙ্গে জুড়ে মনে রাখিয়ে দেব।</p>
       </div>
       <form id="loginForm" style="display:flex;flex-direction:column;gap:14px" novalidate>
         <div class="field"><label for="inName">তোমার নাম (ডাকনাম চলবে)</label><input id="inName" autocomplete="given-name" placeholder="যেমন: রিয়া" required></div>
@@ -244,14 +258,17 @@ input,textarea{font:inherit;color:inherit}
         </div>
         <div class="streak" id="hudStreak">🔥০<small>দিনের স্ট্রিক</small></div>
       </div>
+      <button class="chbar" id="goChapters"><span style="font-size:26px">📖</span><span class="grow"><b id="chName">বহির্জাত প্রক্রিয়া ও সৃষ্ট ভূমিরূপ</b><small id="chSub">ভূগোল · অধ্যায় ১</small></span><span class="sw">অধ্যায় বদলাও</span></button>
       <div>
         <p class="brand" id="hello" style="font-size:26px">নমস্কার!</p>
         <p class="lead">আজ কোন খেলা খেলবে?</p>
       </div>
       <div class="modes">
+        <button class="mode wide hero" id="goStudy"><span class="ic" style="font-size:38px">📖</span><span class="grow"><b>পড়ার ক্লাস</b><span>মাইন্ড ম্যাপ, ছবির কার্ড, মনে রাখার কৌশল, ভিডিও, কুইজ আর পরীক্ষার প্রস্তুতি। যেখানে আটকাবে, 🤖 চাপলেই বট বুঝিয়ে দেবে।</span></span></button>
         <button class="mode wide" id="goWorld"><span class="ic" style="font-size:34px">🌏</span><span class="grow"><b>আমার জগৎ</b><span id="worldLine">তোমার বাড়ি, রাস্তা, প্রিয় মানুষ, গান, আইডল লেখো। বট এগুলো দিয়েই মনে রাখাবে।</span><span class="bar"><i id="worldBar" style="width:0"></i></span></span></button>
         <button class="mode wide" id="goDeck"><span class="ic" style="font-size:34px">🃏</span><span class="grow"><b>স্মৃতি-কার্ড খেলা</b><span id="deckLine">বটের বানানো কার্ড এখানে জমবে, ১-৩-৭-২১ দিনে ফিরে আসবে।</span></span><span class="pill" id="deckDue" hidden>০</span></button>
         <button class="mode wide" id="goBank"><span class="ic" style="font-size:34px">📚</span><span class="grow"><b>প্রশ্নব্যাংক</b><span>১, ২, ৩ ও ৫ নম্বরের সব প্রশ্ন, মডেল উত্তর আর ছবি</span></span></button>
+        <button class="mode wide" id="goMedia" hidden><span class="ic" style="font-size:34px">🎬</span><span class="grow"><b>ছবি ও ভিডিও</b><span id="mediaLine">শিক্ষকের দেওয়া ছবি আর ভিডিও</span></span></button>
         <button class="mode" data-mode="viva"><span class="ic">🎙️</span><b>মৌখিক</b><span>মুখে বলে উত্তর</span></button>
         <button class="mode" data-mode="practice"><span class="ic">✍️</span><b>অনুশীলন</b><span>লিখে উত্তর, সঙ্গে সঙ্গে শেখা</span></button>
         <button class="mode" data-mode="test"><span class="ic">📝</span><b>পরীক্ষা</b><span>১০ প্রশ্ন, শেষে রিপোর্ট</span></button>
@@ -308,7 +325,7 @@ input,textarea{font:inherit;color:inherit}
   <section class="screen" id="s-bank" hidden>
     <div class="top pad">
       <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
-      <h1>প্রশ্নব্যাংক<small>মাধ্যমিক ভূগোল · প্রথম অধ্যায়</small></h1>
+      <h1>প্রশ্নব্যাংক<small id="bankSub">মাধ্যমিক ভূগোল · প্রথম অধ্যায়</small></h1>
     </div>
     <div class="scroll pad" id="bankBody"></div>
   </section>
@@ -329,6 +346,34 @@ input,textarea{font:inherit;color:inherit}
       <h1>স্মৃতি-কার্ড<small id="deckSub">০টি কার্ড</small></h1>
     </div>
     <div class="scroll pad" id="deckBody"></div>
+  </section>
+
+  <!-- STUDY CLASS (study.html: mind map, cards, tricks, videos, quiz, exam) -->
+  <section class="screen" id="s-study" hidden>
+    <div class="top pad">
+      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
+      <h1>পড়ার ক্লাস<small id="studySub"></small></h1>
+      <button class="iconbtn" id="studyBot" aria-label="বটকে জিজ্ঞেস করো">🤖</button>
+    </div>
+    <iframe class="studyframe" id="studyFrame" title="পড়ার ক্লাস"></iframe>
+  </section>
+
+  <!-- CHAPTER LIST -->
+  <section class="screen" id="s-chapters" hidden>
+    <div class="top pad">
+      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
+      <h1>অধ্যায় বেছে নাও<small id="chaptersSub">যে অধ্যায় পড়বে, তাতে চাপ দাও</small></h1>
+    </div>
+    <div class="scroll pad" id="chaptersBody"></div>
+  </section>
+
+  <!-- PICTURES AND VIDEOS -->
+  <section class="screen" id="s-media" hidden>
+    <div class="top pad">
+      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
+      <h1>ছবি ও ভিডিও<small id="mediaSub"></small></h1>
+    </div>
+    <div class="scroll pad" id="mediaBody"></div>
   </section>
 </div>
 
@@ -377,6 +422,13 @@ wadi:`<rect class="L" x="0" y="0" width="200" height="120"/><path fill="none" st
 const FIGKEY = { plunge: 'falls' };
 function fig(k) { k = FIGKEY[k] || k; return F[k] ? `<svg class="fig" viewBox="0 0 200 120" role="img" aria-label="চিত্র">${F[k]}</svg>` : ''; }
 
+// pictures the teacher uploaded in the control panel (kept in Google Drive, shared view-only)
+const picUrl = (id) => 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1000';
+function pic(id) {
+  const m = ((CH && CH.media && CH.media.images) || []).find((x) => x.id === id);
+  return `<img class="pic" loading="lazy" src="${picUrl(id)}" alt="${esc(m ? m.caption : 'ছবি')}">${m && m.caption ? `<div class="small">${esc(m.caption)}</div>` : ''}`;
+}
+
 /* ============ helpers ============ */
 const $ = (s, r = document) => r.querySelector(s);
 const store = {
@@ -392,7 +444,7 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + Strin
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 function render(text) {
   let h = esc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-  h = h.replace(/\[\[ছবি:\s*([a-z]+)\s*\]\]/g, (_, k) => fig(k));
+  h = h.replace(/\[\[ছবি:\s*(img:[\w-]+|[a-z]+)\s*\]\]/g, (_, k) => (k.indexOf('img:') === 0 ? pic(k.slice(4)) : fig(k)));
   return h.replace(/\n/g, '<br>');
 }
 // toasts play one after another so a burst of rewards stays readable
@@ -413,8 +465,13 @@ let hist = [];
 let busy = false;
 const K = (k) => k + '_' + (me ? me.roll : '');   // per-student storage keys
 let lesson = 0;                      // current lesson number in "শেখো" (0 = not a lesson chat)
-const chatKey = () => K('chat_' + mode + (mode === 'learn' && lesson ? '_L' + lesson : ''));
-const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck', 's-lessons', 's-bank'];
+// Chapters: "geo1" is the built-in Chapter 1; other chapters come from the teacher's control panel.
+let chap = 'geo1', CH = null;        // CH = the current chapter's data from the server (lessons, question bank, pictures, videos)
+const isGeo = () => chap === 'geo1';
+const sfx = (id) => (id === 'geo1' ? '' : '_c' + id);
+const KC = (k) => K(k) + sfx(chap);  // per-student AND per-chapter keys (Chapter 1 keeps its old keys)
+const chatKey = () => KC('chat_' + mode + (mode === 'learn' && lesson ? '_L' + lesson : ''));
+const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck', 's-lessons', 's-bank', 's-chapters', 's-media', 's-study'];
 function show(id) { VIEWS.forEach((s) => { $('#' + s).hidden = s !== id; }); }
 document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => goHome()));
 
@@ -572,8 +629,8 @@ const gameText = () => { const i = levelOf(game.xp), n = LEVELS[i + 1]; return `
 /* ============ memory-card deck (Leitner boxes: 1, 3, 7, 21 days) ============ */
 const BOX_DAYS = [0, 1, 3, 7, 21];
 let deck = [];
-const loadDeck = () => { deck = store.get(K('deck'), []); };
-const saveDeck = () => store.set(K('deck'), deck);
+const loadDeck = () => { deck = store.get(KC('deck'), []); };
+const saveDeck = () => store.set(KC('deck'), deck);
 const dueCards = () => deck.filter((c) => c.due <= today());
 function addCard(c) {
   if (!c || !c.front) return;
@@ -618,7 +675,7 @@ $('#deckBody').addEventListener('click', (e) => {
 $('#goDeck').onclick = openDeck;
 
 /* ============ "শেখো": day-by-day lessons (same numbers and titles as LESSONS on the server) ============ */
-const LESSONS = [
+const GEO_LESSONS = [
   ['🌞', 'বহির্জাত প্রক্রিয়া কী', 'সংজ্ঞা, বৈশিষ্ট্য, মাধ্যম'],
   ['⚖️', 'অবরোহণ, আরোহণ, পর্যায়ন ও নগ্নীভবন', 'ভূমি কীভাবে ক্ষয়ে আর ভরে'],
   ['🏞️', 'নদী: পরিভাষা, তিন গতি, ক্ষয় ও বহন', 'উচ্চ, মধ্য, নিম্নগতি'],
@@ -634,13 +691,14 @@ const LESSONS = [
   ['🌳', 'সুন্দরবন ও মরু প্রসারণ', 'জলবায়ু পরিবর্তন ও মরুভূমির বিস্তার'],
   ['🏁', 'পুরো অধ্যায় ঝালাই', 'সব পাঠ থেকে মিশ্র প্রশ্ন'],
 ];
-const lessonsDone = () => store.get(K('lessons'), []);
-function markLessonDone(n) { const d = lessonsDone(); if (!d.includes(n)) { d.push(n); d.sort((a, b) => a - b); store.set(K('lessons'), d); return true; } return false; }
+let LESSONS = GEO_LESSONS;             // the current chapter's lessons: [icon, title, subtitle]
+const lessonsDone = () => store.get(KC('lessons'), []);
+function markLessonDone(n) { const d = lessonsDone(); if (!d.includes(n)) { d.push(n); d.sort((a, b) => a - b); store.set(KC('lessons'), d); return true; } return false; }
 const nextLesson = () => { const d = lessonsDone(); const i = LESSONS.findIndex((_, j) => !d.includes(j + 1)); return i < 0 ? 0 : i + 1; };
-const lessonStarted = (n) => store.get(K('chat_learn_L' + n), []).length > 0;
+const lessonStarted = (n) => store.get(KC('chat_learn_L' + n), []).length > 0;
 function renderLessonLine() {
   const d = lessonsDone().length, n = nextLesson();
-  $('#lessonLine').textContent = d ? (n ? `${bn(d)}/${bn(LESSONS.length)} শেষ · এবার পাঠ ${bn(n)}` : 'সব পাঠ শেষ! 🏆') : 'দিনে একটা পাঠ, ১৪ দিনে পুরো অধ্যায়';
+  $('#lessonLine').textContent = d ? (n ? `${bn(d)}/${bn(LESSONS.length)} শেষ · এবার পাঠ ${bn(n)}` : 'সব পাঠ শেষ! 🏆') : `দিনে একটা পাঠ, ${bn(LESSONS.length)} দিনে পুরো অধ্যায়`;
 }
 function openLessons() {
   stopAll(); show('s-lessons');
@@ -680,46 +738,51 @@ $('#log').addEventListener('click', (e) => {
 let BANK = null;
 async function loadBank() {
   if (BANK) return BANK;
+  if (!isGeo()) { if (!CH || !CH.bank) throw new Error('bank'); BANK = CH.bank; return BANK; }
   const r = await fetch('bank.json', { cache: 'no-cache' });
   if (!r.ok) throw new Error('bank');
   BANK = await r.json(); return BANK;
 }
 // Adds the whole chapter as memory cards once (about 8 new cards a day, so the daily revision stays small).
 async function seedDeck() {
-  if (store.get(K('seeded1'), false)) return 0;
+  if (store.get(KC('seeded1'), false)) return 0;
   let d; try { d = await loadBank(); } catch (e) { return 0; }
   const cards = [];
-  d.lf.forEach((x) => cards.push({ term: x.n, front: `**${x.n}** কী? কীভাবে তৈরি হয়? (শক্তি: ${x.s}, কাজ: ${x.k})`, back: `**সংজ্ঞা:** ${x.d}\n**উৎপত্তি:** ${x.o}\n**উদাহরণ:** ${x.e}` + (x.h ? `\n💡 ${x.h}` : ''), figure: x.f }));
-  d.mn.forEach((x) => cards.push({ term: x.t, front: `মনে রাখার বাক্য: **${x.t}**`, back: `“${x.p}”` + (x.m ? `\n${x.m}` : '') }));
-  d.rc.filter((x) => x.v).forEach((x) => cards.push({ term: x.k, front: `**${x.k}** কোনটি / কত?`, back: x.v }));
+  const geo = isGeo();
+  (d.lf || []).forEach((x) => cards.push({ term: x.n, front: geo ? `**${x.n}** কী? কীভাবে তৈরি হয়? (শক্তি: ${x.s}, কাজ: ${x.k})` : `**${x.n}** কী? বুঝিয়ে বলো।` + (x.s ? ` (${x.s})` : ''),
+    back: `**সংজ্ঞা:** ${x.d}\n**${geo ? 'উৎপত্তি' : 'ব্যাখ্যা'}:** ${x.o}` + (x.e ? `\n**উদাহরণ:** ${x.e}` : '') + (x.h ? `\n💡 ${x.h}` : '') + (x.img ? `\n[[ছবি:img:${x.img}]]` : ''), figure: x.f }));
+  (d.mn || []).forEach((x) => cards.push({ term: x.t, front: `মনে রাখার বাক্য: **${x.t}**`, back: `“${x.p}”` + (x.m ? `\n${x.m}` : '') }));
+  (d.rc || []).filter((x) => x.v).forEach((x) => cards.push({ term: x.k, front: `**${x.k}** কোনটি / কত?`, back: x.v }));
   const have = new Set(deck.map((c) => c.term));
   let i = 0;
   cards.forEach((c) => { if (have.has(c.term)) return; deck.push(Object.assign({ id: 'b' + i, box: 1, due: addDays(today(), Math.floor(i / 8)), builtin: 1 }, c)); i++; });
-  saveDeck(); store.set(K('seeded1'), true);
+  saveDeck(); store.set(KC('seeded1'), true);
   return i;
 }
 let bankTab = 'l5';
 const BANK_TABS = [['l5', '৫ নম্বর'], ['d3', '৩ নম্বর'], ['s2', '২ নম্বর'], ['one', '১ নম্বর'], ['lf', 'সব ভূমিরূপ'], ['mn', 'মনে রাখো'], ['rc', 'সংখ্যা ও রেকর্ড']];
 async function openBank(tab) {
   stopAll(); show('s-bank'); if (tab) bankTab = tab;
+  $('#bankSub').textContent = chapterLabel();
   const b = $('#bankBody');
   if (!BANK) b.innerHTML = '<p class="small">লোড হচ্ছে…</p>';
   try { await loadBank(); } catch (e) { b.innerHTML = '<div class="card">প্রশ্নব্যাংক খুলতে ইন্টারনেট লাগবে। একবার খুললে পরে ইন্টারনেট ছাড়াও খুলবে।</div>'; return; }
   renderBank();
 }
-const lfByName = (n) => BANK.lf.find((x) => x.n === n);
+const lfByName = (n) => (BANK.lf || []).find((x) => x.n === n);
 function lfHTML(x, label) {
   if (!x) return '';
-  return `<h3>${label ? label + ' ' : ''}${esc(x.n)}${x.en ? ` <span class="small">(${esc(x.en)})</span>` : ''}</h3>${fig(x.f)}` +
-    `<p><b>সংজ্ঞা:</b> ${esc(x.d)}</p><p><b>উৎপত্তি:</b> ${esc(x.o)}</p><p><b>উদাহরণ:</b> ${esc(x.e)}</p>` + (x.h ? `<p class="hook">💡 ${esc(x.h)}</p>` : '');
+  return `<h3>${label ? label + ' ' : ''}${esc(x.n)}${x.en ? ` <span class="small">(${esc(x.en)})</span>` : ''}</h3>${fig(x.f)}${x.img ? pic(x.img) : ''}` +
+    `<p><b>সংজ্ঞা:</b> ${esc(x.d)}</p><p><b>${isGeo() ? 'উৎপত্তি' : 'ব্যাখ্যা'}:</b> ${esc(x.o)}</p>` + (x.e ? `<p><b>উদাহরণ:</b> ${esc(x.e)}</p>` : '') + (x.h ? `<p class="hook">💡 ${esc(x.h)}</p>` : '');
 }
 const KA = ['(ক)', '(খ)', '(গ)', '(ঘ)', '(ঙ)'];
 const practiceBtn = (q, m) => `<button class="linkbtn" data-practice="${esc(q)}" data-marks="${m}">✍️ নিজে উত্তর লিখে দেখাও, বট ${bn(m)} নম্বরে মূল্যায়ন করবে</button>`;
 function renderBank() {
   const d = BANK, t = bankTab;
-  let h = `<div class="tabs">${BANK_TABS.map(([k, v]) => `<button class="tab${k === t ? ' on' : ''}" data-tab="${k}">${v}</button>`).join('')}</div>`;
+  let h = `<div class="tabs">${BANK_TABS.map(([k, v]) => `<button class="tab${k === t ? ' on' : ''}" data-tab="${k}">${k === 'lf' && !isGeo() ? 'মূল ধারণা' : v}</button>`).join('')}</div>`;
   if (t === 'l5') {
-    h += `<div class="tip">৫ নম্বরের উত্তরে প্রতিটি ভূমিরূপের জন্য লেখো: <b>সংজ্ঞা → উৎপত্তি → বৈশিষ্ট্য ও উদাহরণ → পরিষ্কার চিত্র</b>। চিত্রে নাম লিখতে ভুলো না।</div>`;
+    h += isGeo() ? `<div class="tip">৫ নম্বরের উত্তরে প্রতিটি ভূমিরূপের জন্য লেখো: <b>সংজ্ঞা → উৎপত্তি → বৈশিষ্ট্য ও উদাহরণ → পরিষ্কার চিত্র</b>। চিত্রে নাম লিখতে ভুলো না।</div>`
+      : `<div class="tip">৫ নম্বরের উত্তরে প্রতিটি অংশে লেখো: <b>মূল কথা বা সংজ্ঞা → ব্যাখ্যা বা কারণ → উদাহরণ</b> (আর যেখানে লাগে, পরিষ্কার চিত্র)।</div>`;
     h += d.l5.map((q, i) => `<details class="qa"><summary>${bn(i + 1)}. ${esc(q.q)}${q.y ? `<span class="yrs">মাধ্যমিকে: ${esc(q.y)}</span>` : ''}</summary><div class="ans">` +
       (q.lf.length ? q.lf.map((n, j) => lfHTML(lfByName(n), KA[j])).join('') : '') +
       (q.t.length ? q.t.map((l) => /^[-•]/.test(l) ? `<p>• ${esc(l.replace(/^[-•]\s*/, ''))}</p>` : `<h3>${esc(l)}</h3>`).join('') : '') +
@@ -773,7 +836,7 @@ async function call(body) {
   // give up after 60 seconds so a stuck reply never leaves the student waiting forever
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);
   let res;
-  try { res = await fetch(url, { method: 'POST', signal: ctl.signal, body: JSON.stringify(Object.assign({ code: me.code, student: { name: me.name, roll: me.roll, school: me.school || '' } }, body)) }); }
+  try { res = await fetch(url, { method: 'POST', signal: ctl.signal, body: JSON.stringify(Object.assign({ code: me.code, chapter: chap, student: { name: me.name, roll: me.roll, school: me.school || '' } }, body)) }); }
   catch (e) { throw new Error(e.name === 'AbortError' ? 'বট এখন খুব ব্যস্ত। “আবার চেষ্টা করো” চাপো।' : 'ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করো।'); }
   finally { clearTimeout(timer); }
   if (!res.ok) throw new Error('সার্ভার সাড়া দিচ্ছে না (' + res.status + ')। ইন্টারনেট দেখে আবার চেষ্টা করো।');
@@ -791,11 +854,116 @@ $('#loginForm').addEventListener('submit', (e) => {
   me = { name, roll, code, school }; store.set('me', me); err.hidden = true; boot();
 });
 $('#logout').onclick = () => { store.del('me'); me = null; show('s-login'); };
-function boot() { loadWorld(); loadGame(); loadDeck(); goHome(); seedDeck().then((n) => { if (n && !$('#s-home').hidden) renderHud(); }); }
+function boot() {
+  loadWorld(); loadGame();
+  useChapter(store.get(K('chap'), 'geo1')).catch(() => useChapter('geo1')).then(() => {
+    goHome(); seedDeck().then((n) => { if (n && !$('#s-home').hidden) renderHud(); });
+    refreshChapters();
+    const pend = store.get('pendingAsk', null);
+    if (pend) { store.del('pendingAsk'); const go = () => askFromStudy(pend.text, pend.marks); if (pend.ch && pend.ch !== chap) useChapter(pend.ch).then(go, go); else go(); }
+  });
+}
+
+/* ============ chapters ============ */
+// Opens a chapter: its lessons, question bank, pictures and the student's own progress in it.
+async function useChapter(id, fresh) {
+  let d = store.get('chapdata_' + id, null);
+  if ((!d && id !== 'geo1') || fresh) {
+    try { const r = await call({ action: 'chapter', id }); d = r.chapter; store.set('chapdata_' + id, d); }
+    catch (e) { if (!d && id !== 'geo1') throw e; }
+  }
+  chap = id; CH = d; store.set(K('chap'), id);
+  LESSONS = id === 'geo1' || !d || !(d.lessons || []).length ? GEO_LESSONS : d.lessons.map((l) => [l.icon || '📘', l.t, l.sub || '']);
+  BANK = null; loadDeck();
+}
+const chapterTitle = () => (CH && CH.title) || 'বহির্জাত প্রক্রিয়া ও সৃষ্ট ভূমিরূপ';
+const chapterLabel = () => 'মাধ্যমিক ' + ((CH && CH.subject) || 'ভূগোল') + ' · অধ্যায় ' + bn((CH && CH.order) || 1);
+// The chapter list from the server; a chapter the teacher changed is downloaded again.
+async function refreshChapters() {
+  let list;
+  try { list = (await call({ action: 'chapters' })).chapters || []; } catch (e) { return store.get('chlist', []); }
+  store.set('chlist', list);
+  const cur = list.find((c) => c.id === chap);
+  if (!cur && chap !== 'geo1') { await useChapter('geo1'); if (!$('#s-home').hidden) goHome(); toast('আগের অধ্যায়টা এখন বন্ধ, প্রথম অধ্যায় খোলা হলো'); }
+  else if (cur && (!CH || (cur.updated || 0) > (CH.updated || 0))) {
+    try { await useChapter(chap, true); if (!$('#s-home').hidden) renderChapterBar(); } catch (e) {}
+  }
+  return list;
+}
+function renderChapterBar() {
+  $('#chName').textContent = chapterTitle();
+  $('#chSub').textContent = ((CH && CH.subject) || 'ভূগোল') + ' · অধ্যায় ' + bn((CH && CH.order) || 1) + ' · ' + bn(lessonsDone().length) + '/' + bn(LESSONS.length) + ' পাঠ শেষ';
+  const m = (CH && CH.media) || {}, ni = (m.images || []).length, nv = (m.videos || []).length;
+  $('#goMedia').hidden = true;   // pictures and videos are in পড়ার ক্লাস → ভিডিও ও ছবি
+  $('#mediaLine').textContent = [ni && bn(ni) + 'টি ছবি', nv && bn(nv) + 'টি ভিডিও'].filter(Boolean).join(' · ') + ', শিক্ষকের দেওয়া';
+  renderLessonLine();
+}
+function openChapters() {
+  stopAll(); show('s-chapters');
+  renderChapters(store.get('chlist', []));
+  refreshChapters().then((l) => { if (!$('#s-chapters').hidden) renderChapters(l); });
+}
+function renderChapters(list) {
+  if (!list.length) list = [{ id: 'geo1', subject: 'ভূগোল', title: 'বহির্জাত প্রক্রিয়া ও সৃষ্ট ভূমিরূপ', order: 1, lessons: GEO_LESSONS.length }];
+  const subjects = [];
+  list.forEach((c) => { if (subjects.indexOf(c.subject) < 0) subjects.push(c.subject); });
+  $('#chaptersBody').innerHTML = subjects.map((s) => `<p class="subj">${esc(s || 'অন্যান্য')}</p>` + list.filter((c) => c.subject === s).map((c) => {
+    const done = store.get(K('lessons') + sfx(c.id), []).length, on = c.id === chap;
+    return `<button class="lrow${on ? ' next' : ''}" data-chap="${esc(c.id)}"><span class="lnum">${bn(c.order || '')}</span><span class="grow"><b>${esc(c.title)}</b><span>${c.lessons ? bn(done) + '/' + bn(c.lessons) + ' পাঠ শেষ' : ''}${c.questions ? ' · ' + bn(c.questions) + 'টি প্রশ্ন' : ''}</span></span>${on ? '<span class="lpill now">এখন পড়ছ</span>' : ''}</button>`;
+  }).join('')).join('') + `<p class="small">নতুন অধ্যায় শিক্ষক যোগ করলেই এখানে চলে আসবে।</p>`;
+}
+$('#goChapters').onclick = openChapters;
+$('#chaptersBody').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-chap]'); if (!b) return;
+  const id = b.dataset.chap, info = store.get('chlist', []).find((c) => c.id === id) || {};
+  const cached = store.get('chapdata_' + id, null);
+  b.disabled = true; toast('অধ্যায় খোলা হচ্ছে…');
+  try { await useChapter(id, id !== 'geo1' && (!cached || (info.updated || 0) > (cached.updated || 0))); }
+  catch (err) { b.disabled = false; toast('অধ্যায়টা খোলা গেল না। ইন্টারনেট দেখে আবার চাপো।'); return; }
+  goHome(); seedDeck().then((n) => { if (n && !$('#s-home').hidden) renderHud(); });
+});
+function ytId(u) { const m = String(u).match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? m[1] : ''; }
+function openMedia() {
+  stopAll(); show('s-media');
+  const m = (CH && CH.media) || {}, imgs = m.images || [], vids = m.videos || [];
+  $('#mediaSub').textContent = chapterTitle();
+  let h = '';
+  if (vids.length) h += `<div class="card"><h2>🎬 ভিডিও</h2></div>` + vids.map((v) => {
+    const y = ytId(v.url || '');
+    const frame = v.drive ? `https://drive.google.com/file/d/${encodeURIComponent(v.drive)}/preview` : y ? `https://www.youtube-nocookie.com/embed/${y}` : '';
+    return `<div class="qa"><b>${esc(v.title)}</b>${frame ? `<div class="vid"><iframe src="${frame}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen loading="lazy" title="${esc(v.title)}"></iframe></div>` : `<p><a class="linkbtn" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ভিডিওটা খোলো</a></p>`}</div>`;
+  }).join('');
+  if (imgs.length) h += `<div class="card"><h2>🖼️ ছবি</h2><p class="small" style="margin:0">ছবিতে চাপ দিলে বড় করে খুলবে।</p></div><div class="mgrid">` +
+    imgs.map((x) => `<figure><a href="${picUrl(x.id).replace('w1000', 'w2000')}" target="_blank" rel="noopener"><img class="pic" loading="lazy" src="${picUrl(x.id)}" alt="${esc(x.caption)}"></a><figcaption>${esc(x.caption)}</figcaption></figure>`).join('') + `</div>`;
+  $('#mediaBody').innerHTML = h || '<div class="card">এই অধ্যায়ে এখনো ছবি বা ভিডিও নেই।</div>';
+}
+$('#goMedia').onclick = openMedia;
+
+/* ============ পড়ার ক্লাস: the full study page of the chapter, with the bot one tap away ============ */
+let fromStudy = false;   // a chat opened from the study page goes back there
+function openStudy(tab) {
+  stopAll(); show('s-study');
+  $('#studySub').textContent = chapterTitle();
+  const f = $('#studyFrame'), want = 'study.html?ch=' + encodeURIComponent(chap) + '&v=' + ((CH && CH.updated) || 1) + (tab ? '#' + tab : '');
+  if (f.dataset.src !== want.split('#')[0]) { f.dataset.src = want.split('#')[0]; f.src = want; }
+}
+function askFromStudy(text, marks) {
+  fromStudy = true;
+  nextStart = text; openChat('practice');
+  if (nextStart) { nextStart = null; send(text, true); }
+}
+window.addEventListener('message', (e) => {
+  if (e.origin !== location.origin || !e.data) return;
+  if (e.data.type === 'shikkhok-ask' && e.data.text) askFromStudy(String(e.data.text).slice(0, 1500), Number(e.data.marks) || 0);
+  if (e.data.type === 'shikkhok-bot') { fromStudy = true; openChat('practice'); }
+});
+$('#goStudy').onclick = () => openStudy();
+$('#studyBot').onclick = () => { fromStudy = true; openChat('practice'); };
+
 async function goHome() {
-  stopAll(); show('s-home');
+  stopAll(); show('s-home'); fromStudy = false;
   $('#hello').textContent = 'নমস্কার, ' + me.name.split(' ')[0] + '!';
-  renderHud(); renderLessonLine();
+  renderHud(); renderChapterBar();
   $('#progBody').textContent = 'লোড হচ্ছে…';
   try {
     const { progress: p, lessons_done: ld } = await call({ action: 'progress' });
@@ -842,7 +1010,7 @@ function start() {
   send(`[শুরু] মোড: ${mode}. আমার নাম ${me.name}${thin}। আমাকে স্বাগত জানাও, এই মোডে কী হবে এক লাইনে বলো, তারপর প্রথম প্রশ্ন করো।`, true);
 }
 $('#restart').onclick = () => { stopAll(); store.del(chatKey()); start(); };
-$('#back').onclick = () => (lesson ? openLessons() : goHome());
+$('#back').onclick = () => { if (fromStudy) { fromStudy = false; openStudy(); return; } lesson ? openLessons() : goHome(); };
 
 function paint(m) {
   if (m.hidden) return;

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}img{max-width:100%}</style>
+<title>পড়ার ক্লাস · শিক্ষক বট</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column, sticky tab rail; each agent (নদী/হিমবাহ/বায়ু) owns a colour used everywhere it appears */
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --sunk:#E3E9E5; --ink:#18272B; --muted:#56676B; --line:#CFD9D5;
+  --accent:#0E5C61; --accent-ink:#FFFFFF;
+  --river:#1A7590; --ice:#5468A8; --wind:#B07A1E; --misc:#7B4E86;
+  --ok:#2B7A4B; --okbg:#DDF0E3; --bad:#B23D2B; --badbg:#F8E1DC;
+  --land:#C9B48A; --land2:#94784E; --water:#4AA2C2; --icec:#DCEBF5; --sand:#E8CA82;
+  --f-display:"Baloo Da 2","Noto Sans Bengali",system-ui,sans-serif;
+  --f-body:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111A1C; --surface:#18252A; --sunk:#0D1517; --ink:#E4EDEB; --muted:#94A7AA; --line:#2A3A3E;
+  --accent:#4FB3B4; --accent-ink:#06191A;
+  --river:#5DB8D0; --ice:#9AABE8; --wind:#E2AE55; --misc:#C79AD3;
+  --ok:#6CCB8F; --okbg:#173426; --bad:#F08A76; --badbg:#3A1D18;
+  --land:#6F5F43; --land2:#9A825A; --water:#3C8DAE; --icec:#2F4659; --sand:#9E8448; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111A1C; --surface:#18252A; --sunk:#0D1517; --ink:#E4EDEB; --muted:#94A7AA; --line:#2A3A3E;
+  --accent:#4FB3B4; --accent-ink:#06191A;
+  --river:#5DB8D0; --ice:#9AABE8; --wind:#E2AE55; --misc:#C79AD3;
+  --ok:#6CCB8F; --okbg:#173426; --bad:#F08A76; --badbg:#3A1D18;
+  --land:#6F5F43; --land2:#9A825A; --water:#3C8DAE; --icec:#2F4659; --sand:#9E8448; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.7}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:780px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);line-height:1.25;text-wrap:balance;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+/* Hero */
+.hero{background:var(--surface);border-bottom:1px solid var(--line)}
+.hero .wrap{padding-block:18px 10px}
+.eyebrow{font-size:13px;color:var(--muted);letter-spacing:.02em}
+.hero h1{font-size:clamp(28px,7vw,40px);font-weight:800;color:var(--accent);margin-top:2px}
+.hero p{margin:4px 0 10px;color:var(--muted);max-width:60ch}
+.journey{display:block;width:100%;height:auto;max-width:100%}
+.journey text{font-family:var(--f-body);font-size:11px;fill:var(--ink);font-weight:600}
+
+/* Tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.tabs .wrap{display:flex;gap:6px;overflow-x:auto;padding-block:8px;scrollbar-width:none}
+.tabs .wrap::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 14px;font-weight:600;font-size:15px;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+main .wrap{padding-block:20px 60px}
+section.view{display:flex;flex-direction:column;gap:18px}
+.lead{color:var(--muted);margin:0}
+h2{font-size:26px;font-weight:700}
+h3{font-size:19px;font-weight:700}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.ag-নদী{--c:var(--river)} .ag-হিমবাহ{--c:var(--ice)} .ag-বায়ু{--c:var(--wind)} .ag-যৌথ{--c:var(--misc)} .ag-মূল{--c:var(--accent)}
+.tag{display:inline-block;font-size:12.5px;font-weight:600;border-radius:6px;padding:0 8px;background:color-mix(in srgb,var(--c) 15%,transparent);color:var(--c);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+
+/* Plan */
+.days{display:grid;gap:8px}
+.day{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.day input{width:20px;height:20px;margin-top:4px;accent-color:var(--accent)}
+.day b{font-family:var(--f-display);font-size:17px}
+.day span{color:var(--muted);font-size:14.5px;display:block}
+.day.done{opacity:.6}
+.day.done b{text-decoration:line-through}
+.progress{height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.rule{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.rule div{background:var(--sunk);border-radius:10px;padding:8px 4px}
+.rule b{display:block;font-family:var(--f-display);font-size:22px;color:var(--accent)}
+.rule small{font-size:13px;color:var(--muted)}
+
+/* Mind map */
+.radial{width:100%;max-width:520px;margin:0 auto;display:block}
+.radial text{font-family:var(--f-display);font-weight:700;font-size:15px;fill:#fff;pointer-events:none}
+.radial .node{cursor:pointer}
+.radial .node:hover circle,.radial .node:focus circle{stroke:var(--ink);stroke-width:3}
+.radial .node.on circle{stroke:var(--ink);stroke-width:4}
+.radial .link{stroke:var(--line);stroke-width:3}
+.tree{--c:var(--accent)}
+.tree h3{color:var(--c);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tree ul{list-style:none;margin:0;padding:0 0 0 18px;border-left:3px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.tree > ul{margin-top:10px}
+.tree li{position:relative;padding:4px 0 4px 10px}
+.tree li::before{content:"";position:absolute;left:-18px;top:18px;width:20px;border-top:3px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.tree details > summary{list-style:none;cursor:pointer;font-weight:700}
+.tree details > summary::-webkit-details-marker{display:none}
+.tree details > summary::before{content:"＋";display:inline-block;width:1.3em;color:var(--c)}
+.tree details[open] > summary::before{content:"－"}
+.tree .d{color:var(--muted);font-size:14.5px;display:block}
+.tree .leaf{font-size:15px}
+.vid{font-size:14px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+
+/* Tricks */
+.tricks{display:grid;gap:12px}
+.trick{border-left:4px solid var(--c);background:var(--surface);border-radius:0 12px 12px 0;padding:12px 14px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trick h3{font-size:16px;color:var(--muted);font-family:var(--f-body);font-weight:600}
+.mn{font-family:var(--f-display);font-size:24px;font-weight:800;color:var(--c);line-height:1.3;margin:4px 0 6px}
+.decode{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.decode li{background:var(--sunk);border-radius:8px;padding:2px 9px;font-size:14.5px}
+.decode li b{color:var(--c)}
+.numtable{width:100%;border-collapse:collapse;font-size:15px}
+.numtable td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.numtable td:last-child{font-family:var(--f-display);font-weight:700;color:var(--accent);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Cards */
+.cardbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.switch{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+.carousel{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 12px;scrollbar-width:thin}
+.fc{flex:0 0 min(88%,420px);scroll-snap-align:center;background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fc .fig{background:var(--sunk);border-radius:10px}
+.fc h3{font-size:22px}
+.fc .en{font-size:13px;color:var(--muted);font-weight:500;font-family:var(--f-body)}
+.fc dl{margin:0;display:grid;gap:4px;font-size:15px}
+.fc dt{font-weight:700;color:var(--c);font-size:13.5px}
+.fc dd{margin:0}
+.fc .tip{background:color-mix(in srgb,var(--c) 12%,transparent);border-radius:8px;padding:6px 10px;font-size:14.5px}
+.fc .reveal{border:1px dashed var(--c);background:transparent;border-radius:10px;padding:10px;font-weight:700;color:var(--c)}
+.fc.hide .body{display:none}
+.fc:not(.hide) .reveal{display:none}
+.navrow{display:flex;align-items:center;justify-content:center;gap:12px}
+.navrow button{border:1px solid var(--line);background:var(--surface);border-radius:999px;width:44px;height:44px;font-size:20px}
+.count{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600;min-width:70px;text-align:center}
+
+/* figures */
+.fig{width:100%;height:auto;display:block}
+.fig .L{fill:var(--land)} .fig .L2{fill:var(--land2)} .fig .W{fill:var(--water)} .fig .S{fill:var(--sand)}
+.fig .I{fill:var(--icec);stroke:var(--ice);stroke-width:1.2}
+.fig .K{fill:none;stroke:var(--ink);stroke-width:1.2}
+.fig .R{fill:none;stroke:var(--water);stroke-linecap:round}
+.fig .M{fill:none;stroke:var(--land2);stroke-linecap:round;stroke-dasharray:.1 6;stroke-width:5}
+.fig .A{fill:none;stroke:var(--ink);stroke-width:1.4;marker-end:url(#ah)}
+.fig text{font-family:var(--f-body);font-size:10px;font-weight:700;fill:var(--ink)}
+.fig .bgc{fill:var(--sunk)}
+
+/* Quiz */
+.modes{display:flex;flex-wrap:wrap;gap:8px}
+.qbox{display:flex;flex-direction:column;gap:12px}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.qtext{font-size:19px;font-weight:600;line-height:1.5}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px;font-size:16.5px;display:flex;gap:10px;align-items:center}
+.opt .k{font-family:var(--f-display);font-weight:800;color:var(--muted);min-width:1.4em}
+.opt:hover:not([disabled]){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--okbg)}
+.opt.wrong{border-color:var(--bad);background:var(--badbg)}
+.opt[disabled]{cursor:default}
+.explain{background:var(--sunk);border-radius:10px;padding:10px 12px;font-size:15px}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 18px;font-weight:700;font-size:16px}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.score{font-family:var(--f-display);font-size:48px;font-weight:800;color:var(--accent);line-height:1}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.match .col{display:grid;gap:8px;align-content:start}
+.mitem{border:1.5px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;font-size:15.5px;font-weight:600;text-align:center;min-width:0}
+.mitem.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.mitem.done{border-color:var(--ok);background:var(--okbg);opacity:.75}
+.mitem.shake{animation:shake .35s;border-color:var(--bad)}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.best{font-size:14px;color:var(--muted)}
+
+/* Exam */
+.acc{border:1px solid var(--line);background:var(--surface);border-radius:12px}
+.acc + .acc{margin-top:8px}
+.acc > summary{cursor:pointer;padding:12px 14px;font-weight:600;font-size:16.5px;list-style:none;display:flex;gap:10px;align-items:flex-start}
+.acc > summary::-webkit-details-marker{display:none}
+.acc > summary::before{content:"▸";color:var(--accent);flex:none;transition:transform .2s}
+.acc[open] > summary::before{transform:rotate(90deg)}
+.acc .in{padding:0 14px 14px;display:grid;gap:12px}
+.me{display:inline-flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.me span{font-size:12px;font-weight:700;background:var(--sunk);border-radius:5px;padding:0 6px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ans-lf{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;border-top:1px dashed var(--line);padding-top:10px}
+.ans-lf h4{margin:0 0 2px;font-family:var(--f-display);font-size:17px;color:var(--c)}
+.ans-lf p{margin:0;font-size:15px}
+.ans-lf .fig{background:var(--sunk);border-radius:8px}
+@media (max-width:520px){.ans-lf{grid-template-columns:1fr}.ans-lf .fig{max-width:260px}}
+.diff{overflow-x:auto}
+.diff table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:460px}
+.diff th,.diff td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.diff th{background:var(--sunk);font-weight:700}
+.formula{display:flex;flex-wrap:wrap;gap:6px}
+.formula span{background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:4px 10px;font-weight:700}
+.note{font-size:13.5px;color:var(--muted)}
+ul.plain{margin:0;padding-left:20px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* added: bot buttons, videos & pictures tab, embedded mode */
+.askbot{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:5px 12px;font-weight:700;font-size:14px;margin-top:8px;cursor:pointer}
+.askbot:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.fab{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:20;background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:12px 18px;font-weight:700;font-size:16px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}
+body{padding-bottom:80px}
+.pic{width:100%;border-radius:12px;border:1px solid var(--line);background:var(--sunk);display:block}
+.fc .pic{max-height:220px;object-fit:contain}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mgrid figure{margin:0}.mgrid figcaption{font-size:13.5px;color:var(--muted);margin-top:4px}
+.vidbox{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000;margin-top:8px}.vidbox iframe,.vidbox video{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ytlist{display:flex;flex-wrap:wrap;gap:8px}
+.ansline{margin:4px 0}
+html.embed .hero .journey{display:none}
+html.embed .hero .wrap{padding-block:10px 4px}
+html.embed .hero h1{font-size:24px}
+</style>
+</head>
+<body>
+
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow" id="eyebrow">মাধ্যমিক ভূগোল · প্রথম অধ্যায়</div>
+    <h1 id="htitle">বহির্জাত প্রক্রিয়া ও সৃষ্ট ভূমিরূপ</h1>
+    <p id="hlead">পাহাড়চূড়ার হিমবাহ থেকে সমুদ্রের বদ্বীপ, মাঝে মরুভূমির বালিয়াড়ি। এক যাত্রায় পুরো অধ্যায়।</p>
+    <svg class="journey" id="journey" viewBox="0 0 760 120" role="img" aria-label="হিমবাহ, নদী ও বায়ুর কাজের এলাকা">
+      <path d="M0 120V40L40 10L80 38L110 20L150 60L260 78L380 92H760V120Z" fill="var(--land)"/>
+      <path d="M40 10L60 24L52 30L80 38L70 44L30 30Z" fill="var(--icec)" stroke="var(--ice)"/>
+      <path d="M95 30Q140 70 200 72T330 90T430 98" fill="none" stroke="var(--water)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M430 92H520Q560 96 600 98V120H430Z" fill="var(--water)"/>
+      <path d="M470 98L500 92L530 98Z" fill="var(--sand)"/>
+      <path d="M600 92Q640 70 680 92Q700 78 730 92Z" fill="var(--sand)"/>
+      <text x="22" y="62">হিমবাহ</text><text x="210" y="62">নদী</text><text x="462" y="86">বদ্বীপ</text><text x="640" y="66">বায়ু</text>
+    </svg>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="অংশ">
+  <div class="wrap" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-v="start">শুরু করো</button>
+    <button class="tab" role="tab" data-v="map">মাইন্ড ম্যাপ</button>
+    <button class="tab" role="tab" data-v="tricks">মনে রাখার কৌশল</button>
+    <button class="tab" role="tab" data-v="cards">ছবির কার্ড</button>
+    <button class="tab" role="tab" data-v="quiz">কুইজ</button>
+    <button class="tab" role="tab" data-v="exam">পরীক্ষার প্রস্তুতি</button>
+    <button class="tab" role="tab" data-v="media">ভিডিও ও ছবি</button>
+  </div>
+</nav>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="var(--ink)"/></marker></defs></svg>
+
+<main><div class="wrap">
+
+<!-- START -->
+<section class="view" id="v-start" hidden>
+  <h2>এই অধ্যায় কীভাবে পড়বে</h2>
+  <p class="lead" id="startLead">পুরো অধ্যায়টা আসলে তিনটি শক্তির গল্প: নদী, হিমবাহ আর বায়ু। প্রত্যেকে তিনটি কাজ করে: ক্ষয়, বহন, সঞ্চয়। এই একটা ছক মাথায় রাখলে সব ভূমিরূপ নিজের জায়গায় বসে যাবে।</p>
+  <div class="panel">
+    <h3 id="planTitle">৭ দিনের রুটিন</h3>
+    <p class="note" style="margin:4px 0 10px">যেদিন শেষ করবে, টিক দাও। টিক তোমার ফোনেই থাকবে।</p>
+    <div class="progress" aria-hidden="true"><i id="pbar"></i></div>
+    <div class="days" id="days" style="margin-top:12px"></div>
+  </div>
+  <div class="panel">
+    <h3>১-৩-৭ রিভিশন নিয়ম</h3>
+    <p class="note" style="margin:4px 0 10px">একবার পড়ে মনে থাকে না। একই অংশ এই চারবার ফিরে দেখো, তাহলে পরীক্ষা পর্যন্ত থাকবে।</p>
+    <div class="rule"><div><b>০</b><small>আজ পড়ো</small></div><div><b>১</b><small>পরদিন কার্ড</small></div><div><b>৩</b><small>৩ দিন পরে কুইজ</small></div><div><b>৭</b><small>৭ দিন পরে চিত্র আঁকো</small></div></div>
+  </div>
+  <div class="panel">
+    <h3>পড়ার তিন ধাপ</h3>
+    <ul class="plain">
+      <li><b>দেখো:</b> মাইন্ড ম্যাপে শাখাটা খোলো, পুরো ছবিটা একবার চোখে নাও।</li>
+      <li><b>বলো:</b> ছবির কার্ডে “নিজেকে যাচাই” চালু করো। কার্ড দেখে নাম আর ব্যাখ্যা মুখে বলো, তারপর মিলিয়ে নাও।</li>
+      <li><b>জিজ্ঞেস করো:</b> যেখানে আটকাবে, “🤖 বটকে জিজ্ঞেস করো” চাপো। শিক্ষক বট তোমার নিজের জগতের সঙ্গে জুড়ে বুঝিয়ে দেবে।</li>
+      <li><b>লেখো:</b> পরীক্ষার প্রস্তুতি অংশ থেকে একটা ৫ নম্বরের প্রশ্ন খাতায় চিত্রসহ লেখো।</li>
+    </ul>
+  </div>
+</section>
+
+<!-- MAP -->
+<section class="view" id="v-map" hidden>
+  <h2>মাইন্ড ম্যাপ</h2>
+  <p class="lead" id="mapLead">মাঝখানে অধ্যায়, চারপাশে পাঁচটি শাখা। একটা শাখায় চাপ দাও, নিচে তার পুরো গাছ খুলবে।</p>
+  <svg class="radial" viewBox="0 0 400 330" id="radial" role="group" aria-label="মাইন্ড ম্যাপের শাখা"></svg>
+  <div class="panel tree" id="tree"></div>
+</section>
+
+<!-- TRICKS -->
+<section class="view" id="v-tricks" hidden>
+  <h2>মনে রাখার কৌশল</h2>
+  <p class="lead">প্রতিটা বাক্যের প্রথম অক্ষরগুলো এক একটা পদ্ধতি বা ভূমিরূপ। বাক্যটা একবার মজা করে বলো, তালিকাটা নিজেই মনে পড়বে।</p>
+  <div class="chiprow" id="trickFilter"></div>
+  <div class="tricks" id="tricks"></div>
+  <div class="panel">
+    <h3>সংখ্যা ও রেকর্ড — এক নজরে</h3>
+    <p class="note" style="margin:4px 0 8px">১ নম্বরের প্রশ্নে এগুলোই সবচেয়ে বেশি আসে। কৌশল: “সবচেয়ে” শব্দটা দেখলেই এই তালিকা মনে করো।</p>
+    <div style="overflow-x:auto"><table class="numtable" id="nums"></table></div>
+  </div>
+</section>
+
+<!-- CARDS -->
+<section class="view" id="v-cards" hidden>
+  <h2>ছবির কার্ড</h2>
+  <p class="lead" id="cardsLead">প্রতিটা ভূমিরূপের একটা সরল ছবি। পরীক্ষায় ঠিক এই রকম চিত্রই আঁকবে। পাশে সরাও বা তীর চাপো।</p>
+  <div class="cardbar">
+    <div class="chiprow" id="cardFilter"></div>
+    <label class="switch"><input type="checkbox" id="selftest"> নিজেকে যাচাই</label>
+  </div>
+  <div class="carousel" id="carousel" tabindex="0" aria-label="ভূমিরূপের কার্ড"></div>
+  <div class="navrow"><button id="prev" aria-label="আগের কার্ড">‹</button><span class="count" id="count"></span><button id="next" aria-label="পরের কার্ড">›</button></div>
+</section>
+
+<!-- QUIZ -->
+<section class="view" id="v-quiz" hidden>
+  <h2>কুইজ</h2>
+  <p class="lead">বইয়ের অনুশীলনী আর মাধ্যমিকের বারবার আসা প্রশ্ন থেকে বানানো। প্রতিবার প্রশ্নের ক্রম বদলে যায়।</p>
+  <div class="modes" id="modes"></div>
+  <div class="panel qbox" id="qbox"></div>
+</section>
+
+<!-- EXAM -->
+<section class="view" id="v-exam" hidden>
+  <h2>পরীক্ষার প্রস্তুতি</h2>
+  <div class="panel" id="formulaPanel">
+    <h3>৫ নম্বরের উত্তর লেখার সূত্র</h3>
+    <p class="note" style="margin:4px 0 8px">প্রতিটা ভূমিরূপের জন্য এই পাঁচটা ধাপ। মনে রাখো: <b>“সং-উ-বৈ-উ-চি”</b></p>
+    <div class="formula"><span>সংজ্ঞা</span><span>উৎপত্তি</span><span>বৈশিষ্ট্য</span><span>উদাহরণ</span><span>চিত্র (লেবেলসহ)</span></div>
+    <p class="note" style="margin:8px 0 0">তিনটি ভূমিরূপ চাইলে প্রতিটায় মোটামুটি ১.৫ নম্বর ধরো। চিত্র না আঁকলে নম্বর কাটে, তাই ছোট হলেও আঁকো।</p>
+  </div>
+  <div>
+    <h3 style="margin-bottom:4px">৫ নম্বরের প্রশ্ন</h3>
+    <p class="note" id="meNote" style="margin:0 0 10px">ME = মাধ্যমিক পরীক্ষা, পাশে সাল। সালের তথ্য অনলাইন সাজেশন থেকে নেওয়া; স্কুলের টেস্ট পেপারের সঙ্গে মিলিয়ে নিও।</p>
+    <div id="five"></div>
+  </div>
+  <div>
+    <h3 style="margin-bottom:10px">৩ নম্বর: পার্থক্য লেখো</h3>
+    <div id="diffs"></div>
+  </div>
+  <div>
+    <h3 style="margin-bottom:10px">২ নম্বর: সংক্ষিপ্ত প্রশ্ন</h3>
+    <div id="twos"></div>
+  </div>
+</section>
+
+<!-- VIDEOS & PICTURES -->
+<section class="view" id="v-media" hidden>
+  <h2>ভিডিও ও ছবি</h2>
+  <p class="lead">শিক্ষকের দেওয়া ভিডিও আর ছবি, সঙ্গে প্রতিটা শাখার ভিডিও খোঁজার বোতাম।</p>
+  <div id="vids"></div>
+  <div class="panel"><h3>প্রতিটা শাখার ভিডিও খোঁজো</h3><p class="note" style="margin:4px 0 10px">YouTube-এ খুলবে। দেখার পর এখানে ফিরে এসে কার্ড আর কুইজ করো।</p><div class="ytlist" id="ytlist"></div></div>
+  <div id="pics"></div>
+</section>
+
+</div></main>
+<button class="fab" id="fab">🤖 বটকে জিজ্ঞেস করো</button>
+
+<script>
+
+/* ---------- figures ---------- */
+const F={
+v:`<path class="L" d="M0 25H70L100 105L130 25H200V120H0Z"/><path class="W" d="M93 88H107L100 105Z"/><text x="128" y="70">নিম্নক্ষয় ↓</text>`,
+gorge:`<path class="L" d="M0 18H84L95 108H105L116 18H200V120H0Z"/><path class="W" d="M94 98H106V108H94Z"/><text x="122" y="60">গভীর, সংকীর্ণ</text><text x="8" y="12">আর্দ্র পার্বত্য অঞ্চল</text>`,
+canyon:`<path class="L2" d="M0 15H90V110H110V15H200V120H0Z"/><path class="K" opacity=".35" d="M0 40H90M110 40H200M0 65H90M110 65H200M0 90H90M110 90H200"/><path class="W" d="M90 100H110V110H90Z"/><text x="8" y="11">শুষ্ক অঞ্চল · ‘I’ আকৃতি</text>`,
+falls:`<path class="L" d="M0 30H105V104H200V120H0Z"/><rect class="L2" x="0" y="30" width="105" height="14"/><rect class="W" x="0" y="24" width="105" height="6"/><rect class="W" x="103" y="27" width="8" height="74"/><rect class="W" x="105" y="99" width="95" height="5"/><ellipse class="W" cx="118" cy="106" rx="20" ry="7"/><text x="6" y="40" style="fill:var(--surface)">কঠিন শিলা</text><text x="20" y="80">নরম শিলা</text><text x="140" y="92">প্রপাতকূপ</text><path class="A" d="M150 94L134 103"/>`,
+pothole:`<rect class="W" x="0" y="28" width="200" height="24"/><path class="L" d="M0 52H25A16 22 0 0 0 57 52H92A12 15 0 0 0 116 52H145A18 26 0 0 0 181 52H200V120H0Z"/><path class="W" d="M25 52A16 22 0 0 0 57 52ZM92 52A12 15 0 0 0 116 52ZM145 52A18 26 0 0 0 181 52Z"/><circle class="L2" cx="41" cy="66" r="4"/><circle class="L2" cx="104" cy="62" r="3"/><circle class="L2" cx="163" cy="70" r="5"/><text x="6" y="22">নদীর তলদেশে ঘূর্ণি + নুড়ি</text><text x="60" y="100">মন্থকূপ</text>`,
+fan:`<path class="L2" d="M0 0H200V26C150 38 50 38 0 26Z"/><path class="S" d="M100 32L14 112C70 122 130 122 186 112Z"/><path class="R" stroke-width="2.5" d="M100 6V34M100 34L58 112M100 34L100 116M100 34L142 112M100 62L78 114M100 62L122 114"/><text x="6" y="16" style="fill:var(--surface)">পর্বত</text><text x="128" y="70">হাতপাখা</text>`,
+meander:`<rect class="L" x="0" y="0" width="200" height="120"/><path class="R" stroke-width="10" d="M0 60C30 6 62 6 70 60S110 114 132 60S172 8 200 46"/><text x="44" y="14">খাড়া পাড়</text><path class="A" d="M56 16L50 24"/><text x="38" y="66">ঢালু পাড়</text><text x="138" y="110">বিন্দুবার</text>`,
+oxbow:`<rect class="L" x="0" y="0" width="200" height="120"/><path class="R" stroke-width="9" d="M0 84C60 84 140 84 200 84"/><path class="R" stroke-width="8" d="M66 74C48 20 152 20 134 74"/><text x="68" y="52">অশ্বক্ষুরাকৃতি হ্রদ</text><text x="62" y="108">নদীর নতুন সোজা পথ</text>`,
+flood:`<path class="L" d="M0 70H58Q70 58 80 66L89 95H111L120 66Q130 58 142 70H200V120H0Z"/><path class="W" d="M87 88H113L111 95H89Z"/><text x="56" y="52">লিভি</text><text x="126" y="52">লিভি</text><text x="4" y="64">প্লাবনভূমি</text><text x="150" y="64">প্লাবনভূমি</text><path class="K" opacity=".4" d="M0 100H200M0 110H200"/>`,
+delta:`<rect class="W" x="0" y="0" width="200" height="120"/><rect class="L" x="0" y="0" width="200" height="12"/><path class="S" d="M72 10H128L182 94Q100 122 18 94Z"/><path class="R" stroke-width="2.5" d="M100 8V104M100 30L48 96M100 30L152 96M100 58L74 106M100 58L126 106"/><text x="8" y="112" style="fill:#fff">সমুদ্র</text><text x="112" y="50">Δ</text>`,
+corrie:`<path class="L2" d="M0 120V8L40 10Q56 92 112 84Q140 80 150 70L200 76V120Z"/><path class="W" d="M66 86Q96 94 130 80Q110 76 66 86Z"/><text x="46" y="30">হেড ওয়াল</text><text x="78" y="106" style="fill:var(--surface)">বেসিন</text><text x="140" y="64">থ্রেসহোল্ড</text><text x="88" y="78">টার্ন</text>`,
+arete:`<path class="L2" d="M0 120L30 62L52 72L80 14L96 40L106 34L122 70L152 44L200 120Z"/><path class="I" d="M80 14L88 26L74 28ZM152 44L158 54L146 54Z"/><text x="88" y="12">পিরামিড চূড়া</text><text x="104" y="96" style="fill:var(--surface)">এরিটি</text><path class="A" d="M118 88L104 46"/>`,
+u:`<path class="L" d="M0 18H52V40Q52 102 100 102Q148 102 148 40V18H200V120H0Z"/><path class="W" d="M84 99H116V102H84Z"/><text x="84" y="70" style="font-size:18px">U</text><text x="2" y="12">প্রশস্ত তলদেশ, খাড়া পার্শ্বদেশ</text>`,
+hanging:`<path class="L" d="M0 18H34Q34 106 86 106Q140 106 140 50H200V120H0Z"/><path class="R" stroke-width="4" d="M141 52Q137 78 128 102"/><text x="146" y="44">শাখা উপত্যকা</text><text x="54" y="96">প্রধান হিমদ্রোণী</text><text x="150" y="86">জলপ্রপাত</text>`,
+roche:`<rect class="L" x="0" y="100" width="200" height="20"/><path class="L2" d="M10 101Q58 30 118 44L128 60L136 57L148 80L158 78L170 101Z"/><path class="A" d="M10 22H70"/><text x="10" y="16">হিমবাহের প্রবাহ</text><text x="24" y="70">মসৃণ</text><text x="146" y="54">খাড়া, অমসৃণ</text>`,
+crag:`<rect class="L" x="0" y="100" width="200" height="20"/><path class="L2" d="M28 101L38 42L70 34L82 58Z"/><path class="S" d="M70 34L82 58L28 101L182 101Q130 70 70 34Z" opacity=".85"/><path class="A" d="M10 18H60"/><text x="10" y="12">হিমবাহ</text><text x="34" y="30">ক্র্যাগ</text><text x="120" y="92">টেল</text>`,
+fjord:`<path class="L" d="M0 14H50V36Q50 108 100 108Q150 108 150 36V14H200V120H0Z"/><path class="W" d="M51 54H149Q150 104 100 104Q50 104 51 54Z"/><text x="70" y="82" style="fill:#fff">সমুদ্রের জল</text><text x="2" y="10">ডুবে যাওয়া হিমদ্রোণী</text>`,
+moraine:`<rect class="L" x="0" y="0" width="200" height="120"/><path class="I" d="M10 0H190V48Q100 108 10 48Z"/><path class="M" d="M14 0V48M186 0V48M100 0V70"/><path class="M" d="M4 56Q100 124 196 56"/><text x="20" y="20">পার্শ্ব</text><text x="104" y="30">মধ্য</text><text x="80" y="112">প্রান্ত গ্রাবরেখা</text>`,
+outwash:`<rect class="S" x="0" y="0" width="200" height="120"/><path class="I" d="M0 0H86L74 34Q40 46 0 38Z"/><path class="M" d="M0 46Q50 52 86 30"/><path class="R" stroke-width="2" d="M60 46Q90 70 120 72T196 104M40 50Q70 90 120 98T190 118M78 40Q120 50 150 40T200 50"/><text x="4" y="22">হিমবাহ</text><text x="110" y="62">বহিঃবিধৌত সমভূমি</text>`,
+drumlin:`<rect class="L" x="0" y="96" width="200" height="24"/><path class="L2" d="M14 97Q22 64 52 66Q84 70 96 97Z"/><path class="L2" d="M104 97Q112 70 140 72Q170 76 184 97Z"/><path class="A" d="M10 26H70"/><text x="10" y="20">হিমবাহের প্রবাহ</text><text x="8" y="60">খাড়া</text><text x="70" y="62">মৃদু ঢাল</text><text x="60" y="114" style="fill:var(--surface)">উল্টানো নৌকা</text>`,
+esker:`<rect class="L" x="0" y="0" width="200" height="120"/><path fill="none" stroke="var(--land2)" stroke-width="9" stroke-linecap="round" d="M12 104C52 94 40 46 90 54S150 24 188 16"/><text x="98" y="86">আঁকাবাঁকা শৈলশিরা</text>`,
+kame:`<rect class="L" x="0" y="100" width="200" height="20"/><path class="L2" d="M0 100V10L36 18L44 100Z"/><path class="S" d="M44 64H96L120 100H44Z"/><path class="W" d="M120 100L96 64H200V100Z" opacity=".6"/><text x="52" y="58">কেম সোপান</text><text x="140" y="86">হ্রদ</text>`,
+kettle:`<rect class="S" x="0" y="0" width="200" height="120"/><ellipse class="W" cx="58" cy="54" rx="34" ry="22"/><ellipse class="W" cx="146" cy="82" rx="28" ry="16"/><ellipse class="S" cx="58" cy="54" rx="8" ry="5"/><text x="22" y="98">কেটল হ্রদ</text><text x="66" y="40">নব</text>`,
+deflation:`<path class="S" d="M0 50H40Q60 54 70 86Q100 102 130 86Q140 54 160 50H200V120H0Z"/><ellipse class="W" cx="100" cy="94" rx="20" ry="5"/><path class="A" d="M10 30H60"/><path class="A" d="M80 60Q90 40 110 30"/><text x="10" y="24">বায়ু</text><text x="70" y="114">মরূদ্যান</text><text x="118" y="34">বালি উড়ে যায়</text>`,
+gour:`<rect class="S" x="0" y="100" width="200" height="20"/><path class="L2" d="M64 30Q100 12 136 30L132 50Q112 54 108 62L105 101H95L92 62Q88 54 68 50Z"/><path class="A" d="M10 86H60"/><text x="10" y="80">বালির আঘাত</text><text x="140" y="30">চওড়া মাথা</text><text x="112" y="88">সরু নিম্নাংশ</text>`,
+zeugen:`<rect class="S" x="0" y="100" width="200" height="20"/><rect class="L2" x="16" y="42" width="70" height="12"/><rect class="L" x="22" y="54" width="58" height="47"/><rect class="L2" x="112" y="52" width="70" height="12"/><rect class="L" x="118" y="64" width="58" height="37"/><text x="18" y="36">কঠিন শিলা (টেবিলের মাথা)</text><text x="28" y="84">কোমল</text>`,
+yardang:`<rect class="S" x="0" y="100" width="200" height="20"/><path class="L2" d="M8 101L22 40L36 101ZM50 101L66 30L82 101ZM98 101L112 46L126 101ZM142 101L158 34L174 101Z"/><text x="4" y="22">মোরগের ঝুঁটি</text><text x="96" y="22">উল্লম্ব স্তর</text>`,
+insel:`<rect class="L" x="0" y="96" width="200" height="24"/><path class="L2" d="M52 97Q56 30 100 28Q144 30 148 97Z"/><text x="4" y="90">মরু সমভূমি</text><text x="70" y="20">দ্বীপশৈল</text>`,
+barchan:`<rect class="bgc" x="0" y="0" width="200" height="120"/><path class="S" d="M44 22Q130 14 164 60Q130 106 44 98Q108 62 44 22Z"/><path class="A" d="M196 60H172"/><text x="166" y="50">বায়ু</text><text x="6" y="20">শিং</text><text x="6" y="108">শিং</text><text x="82" y="64">অর্ধচন্দ্র</text>`,
+seif:`<rect class="bgc" x="0" y="0" width="200" height="120"/><path class="S" d="M6 26Q100 14 194 26Q100 36 6 26ZM6 60Q100 48 194 60Q100 70 6 60ZM6 94Q100 82 194 94Q100 104 6 94Z"/><path class="A" d="M60 44H140"/><text x="60" y="80">বায়ুর সমান্তরালে, তলোয়ারের মতো</text>`,
+loess:`<path class="S" d="M0 70H200V120H0Z"/><path class="K" opacity=".3" d="M0 82H200M0 94H200M0 106H200"/><path class="A" d="M10 30Q60 20 110 50"/><circle cx="40" cy="36" r="1.6" fill="var(--land2)"/><circle cx="60" cy="30" r="1.6" fill="var(--land2)"/><circle cx="80" cy="38" r="1.6" fill="var(--land2)"/><circle cx="96" cy="44" r="1.6" fill="var(--land2)"/><text x="10" y="18">মরুভূমি থেকে ধূলি</text><text x="110" y="64">হলুদ সূক্ষ্ম স্তর</text>`,
+pediment:`<path class="L2" d="M0 120V24L22 20L34 60H0Z"/><path class="L2" d="M200 120V24L178 20L166 60H200Z"/><path class="L" d="M0 60H34L68 84L90 94H110L132 84L166 60H200V120H0Z"/><path class="S" d="M52 74L68 84L90 94H110L132 84L148 74L150 120H50Z"/><path class="W" d="M88 93H112L110 97H90Z"/><text x="2" y="76">পেডিমেন্ট</text><text x="54" y="112">বাজাদা</text><text x="84" y="88">প্লায়া</text>`,
+wadi:`<rect class="L" x="0" y="0" width="200" height="120"/><path fill="none" stroke="var(--sand)" stroke-width="12" stroke-linecap="round" d="M0 30C50 30 60 90 110 80S170 40 200 70"/><path class="R" stroke-width="1.5" stroke-dasharray="4 5" d="M0 30C50 30 60 90 110 80S170 40 200 70"/><text x="44" y="112">শুকনো নদীখাত</text>`
+};
+function fig(k,label){return `<svg class="fig" viewBox="0 0 200 120" role="img" aria-label="${label||''}">${F[k]||''}</svg>`}
+
+/* ---------- landform cards ---------- */
+const CARDS=[
+{k:'v',n:'‘V’ আকৃতির উপত্যকা',en:'V-shaped Valley',ag:'নদী',w:'ক্ষয়',def:'উচ্চগতিতে নদীর দুপাশ ঢালু, তলা সরু ইংরেজি V অক্ষরের মতো উপত্যকা।',org:'ঢাল বেশি বলে নদী প্রবল বেগে নিম্নক্ষয় করে, উপত্যকা গভীর হয়। পরে আবহবিকার, পুঞ্জিত ক্ষয় ও ধসে দুপাশ চওড়া হয়ে V আকার নেয়।',ex:'গঙ্গার উচ্চগতি (গোমুখ–হরিদ্বার)',tip:'প্রথমে I, পরে দুপাশ খসে V। মনে রাখো: “I বড় হয়ে V”।'},
+{k:'gorge',n:'গিরিখাত',en:'Gorge',ag:'নদী',w:'ক্ষয়',def:'আর্দ্র পার্বত্য অঞ্চলে খুব গভীর ও সংকীর্ণ V আকৃতির নদী উপত্যকা।',org:'আর্দ্র অঞ্চলে জল বেশি, দুপাশে কঠিন শিলা। তাই অল্প পার্শ্বক্ষয়ের সঙ্গে তীব্র নিম্নক্ষয় হয়ে উপত্যকা খুব গভীর হয়।',ex:'কালী গণ্ডকী, নেপাল (গভীরতম, ৫৫৭১ মি); ইচাং, চীন (দীর্ঘতম)',tip:'গিরিখাত = বৃষ্টি আছে, তাই একটু চওড়া V।'},
+{k:'canyon',n:'ক্যানিয়ন',en:'Canyon',ag:'নদী',w:'ক্ষয়',def:'শুষ্ক মরুপ্রায় অঞ্চলে অত্যন্ত গভীর ও সংকীর্ণ ‘I’ আকৃতির নদী উপত্যকা।',org:'বৃষ্টি কম বলে দুপাশে ক্ষয় প্রায় হয় না, অথচ নদী তীব্র নিম্নক্ষয় করে। তাই উপত্যকা নলের মতো খাড়া।',ex:'গ্র্যান্ড ক্যানিয়ন, কলোরাডো নদী (বৃহত্তম); সাংপো ক্যানিয়ন (গভীরতম); ভারতের গ্র্যান্ড ক্যানিয়ন: গনগনি, শিলাবতী নদী',tip:'স্প্যানিশ ‘Canon’ মানে নল। নল সোজা, তাই I।'},
+{k:'falls',n:'জলপ্রপাত',en:'Waterfall',ag:'নদী',w:'ক্ষয়',def:'নদীর গতিপথ হঠাৎ খাড়াভাবে নেমে গেলে জল ওপর থেকে সরাসরি নিচে পড়ে।',org:'নদীপথে কঠিন ও নরম শিলা পাশাপাশি থাকলে নরম শিলা দ্রুত ক্ষয় হয়ে নিচু হয়, কঠিন শিলা উঁচু থেকে যায়। চ্যুতি, ঝুলন্ত উপত্যকা, মালভূমির প্রান্তও কারণ।',ex:'সান্টো অ্যাঞ্জেল (উচ্চতম, ৯৭৯ মি); ইগুয়াজু (বিস্তৃততম, ২.৭ কিমি); কুঞ্চিকল, বারাহি নদী (ভারতে উচ্চতম, ৪৫৫ মি)',tip:'কঠিন ওপরে, নরম নিচে = ধাপ = জলপ্রপাত।'},
+{k:'falls',id:'plunge',n:'প্রপাতকূপ',en:'Plunge Pool',ag:'নদী',w:'ক্ষয়',def:'জলপ্রপাতের পাদদেশে হাঁড়ির মতো বিশাল গর্ত।',org:'ওপর থেকে পড়া জল ও শিলাখণ্ডের আঘাতে এবং জলের ঘূর্ণিতে বুদবুদ ক্ষয় হয়ে গর্ত তৈরি হয়।',ex:'চেরাপুঞ্জির কাছে নোহকালিকাই জলপ্রপাত',tip:'প্রপাত + কূপ = প্রপাতের নিচের কুয়ো।'},
+{k:'pothole',n:'মন্থকূপ',en:'Pothole',ag:'নদী',w:'ক্ষয়',def:'নদীর তলদেশে ছোট ছোট গোলাকার ও মসৃণ গর্ত। অনেকগুলো একসঙ্গে হলে পটহোল কলোনি।',org:'নদীবাহিত নুড়ি ঘূর্ণিতে পাক খেতে খেতে নরম শিলায় আঘাত করে (অবঘর্ষ ক্ষয়), গর্ত ক্রমশ গভীর ও মসৃণ হয়।',ex:'খরকাই নদী, সরাইকেল্লা (ঝাড়খণ্ড)',tip:'মন্থন = ঘোরানো। নুড়ি দই মন্থনের মতো ঘোরে।'},
+{k:'fan',n:'পলল শঙ্কু ও পলল ব্যজনী',en:'Alluvial Cone & Fan',ag:'নদী',w:'সঞ্চয়',def:'পর্বতের পাদদেশে নদীর সঞ্চয়ে ত্রিকোণাকার শঙ্কু; ছড়িয়ে হাতপাখার মতো হলে ব্যজনী।',org:'পাহাড় ছেড়ে সমভূমিতে ঢোকার মুখে ঢাল হঠাৎ কমে যায়, বহনক্ষমতা কমে। তাই নুড়ি, কাঁকর, বালি জমে শঙ্কু হয়; নদী শাখায় ভাগ হয়ে তা হাতপাখা হয়।',ex:'হৃষীকেশে গঙ্গার গতিপথ',tip:'ব্যজন মানে পাখা। পাহাড়ের পায়ে পাখা।'},
+{k:'meander',n:'মিয়েন্ডার',en:'Meander',ag:'নদী',w:'সঞ্চয়',def:'মধ্য ও নিম্নগতিতে নদীর আঁকাবাঁকা গতিপথ।',org:'ঢাল কম বলে বেগ কম; সামান্য বাধা পেলেই নদী তা এড়িয়ে পার্শ্বক্ষয় ও সঞ্চয় করে এঁকেবেঁকে চলে। বাইরের পাড়ে ক্ষয় (খাড়া পাড়), ভেতরের পাড়ে সঞ্চয় (ঢালু পাড়)।',ex:'জলঙ্গী নদী; নাম তুরস্কের মিয়েন্ডারেস নদী থেকে',tip:'বাইরে ভাঙে, ভেতরে গড়ে।'},
+{k:'oxbow',n:'অশ্বক্ষুরাকৃতি হ্রদ',en:'Ox-bow Lake',ag:'নদী',w:'সঞ্চয়',def:'নদী বাঁক থেকে বিচ্ছিন্ন হয়ে ঘোড়ার খুরের মতো যে হ্রদ।',org:'বাঁকের অবতল পাড় ক্ষয় হতে থাকে, বাঁক বাড়ে। দুটি বাঁকের মাঝের সরু অংশ (বাঁকগ্রীবা) কেটে যায়; পুরোনো বাঁকের মুখ পলিতে বন্ধ হয়ে হ্রদ হয়।',ex:'মুর্শিদাবাদের মতিঝিল; উত্তরপ্রদেশে কোর বা তাল',tip:'ক্ষয় + বহন + সঞ্চয় তিনটে কাজই লাগে।'},
+{k:'flood',n:'প্লাবনভূমি ও স্বাভাবিক বাঁধ',en:'Flood Plain & Levee',ag:'নদী',w:'সঞ্চয়',def:'বন্যার পলি জমে উপত্যকার দুপাশে উর্বর সমতল ভূমি (প্লাবনভূমি); নদীর দুতীরে বাঁধের মতো উঁচু ভূমি (লিভি)।',org:'বর্ষায় অগভীর উপত্যকা অতিরিক্ত জল বইতে পারে না, দুকূল ছাপিয়ে বন্যা হয়। জল নামার সময় ভারী পলি পাড়ের কাছেই জমে লিভি (২–৩ মি) আর হালকা পলি দূরে ছড়িয়ে প্লাবনভূমি গড়ে।',ex:'গঙ্গা, নীল, ইয়াংসি কিয়াং-এর নিম্ন অববাহিকা',tip:'ভারী পলি কাছে = বাঁধ; হালকা পলি দূরে = সমভূমি।'},
+{k:'delta',n:'বদ্বীপ',en:'Delta',ag:'নদী',w:'সঞ্চয়',def:'মোহানায় পলি জমে মাত্রাহীন ‘ব’ বা গ্রিক ‘Δ’ আকৃতির নতুন ভূমি।',org:'মোহানায় নদীর বেগ প্রায় থাকে না, সমুদ্রস্রোত ও জোয়ার কম। লবণাক্ত জলের সংস্পর্শে পলি জোটবদ্ধ হয়ে জমে চর, পরে শাখানদী তৈরি করে বদ্বীপ বাড়ে।',ex:'গঙ্গা–ব্রহ্মপুত্র (বৃহত্তম, ধনুকাকৃতি); টাইবার (তীক্ষ্ণাগ্র); মিসিসিপি (পাখির পা)। নাম দেন হেরোডোটাস',tip:'গঙ্গা ধনুক টানে, টাইবার দাঁত দেখায়, মিসিসিপি পাখি ওড়ায়।'},
+{k:'corrie',n:'করি বা সার্ক',en:'Corrie / Cirque',ag:'হিমবাহ',w:'ক্ষয়',def:'উঁচু পর্বতগাত্রে হাতলযুক্ত চেয়ার বা অ্যাম্ফিথিয়েটারের মতো ভূমিরূপ। তিন অংশ: হেড ওয়াল, বেসিন, থ্রেসহোল্ড।',org:'উৎপাটনে মাথার দিক খাড়া হয়, মাঝে অবঘর্ষে খাত হয়, প্রান্তে সঞ্চয় ও কম ক্ষয়ে উঁচু চৌকাঠ থাকে। বেসিনে জল জমে করি হ্রদ বা টার্ন।',ex:'ওয়ালকট সার্ক, আন্টার্কটিকা (বৃহত্তম ও গভীরতম)। ফ্রান্সে সার্ক, ওয়েলসে কাম, জার্মানিতে কার',tip:'পাহাড়ের গায়ে বসানো আরামকেদারা।'},
+{k:'arete',n:'এরিটি ও পিরামিড চূড়া',en:'Arête & Horn',ag:'হিমবাহ',w:'ক্ষয়',def:'পাশাপাশি দুটি সার্কের মাঝে ছুরির ফলার মতো খাঁজকাটা শৈলশিরা = এরিটি। ৩–৪টি সার্ক ঘিরে মাঝের পিরামিডের মতো চূড়া = পিরামিড চূড়া বা হর্ন।',org:'সার্কগুলির মাথার দেয়াল দীর্ঘদিন পিছিয়ে ক্ষয় হয়ে মাঝখানের অংশ সরু শিরা বা ছুঁচালো চূড়ায় পরিণত হয়।',ex:'ম্যাটারহর্ন (সুইজারল্যান্ড), নীলকণ্ঠ, শিবলিঙ্গ, মাকালু',tip:'২টি সার্ক = এরিটি, ৩–৪টি সার্ক = পিরামিড।'},
+{k:'u',n:'হিমদ্রোণী',en:'Glacial Trough / U Valley',ag:'হিমবাহ',w:'ক্ষয়',def:'তলদেশ প্রশস্ত ও এবড়োখেবড়ো, পার্শ্বদেশ মসৃণ ও খাড়া ‘U’ আকৃতির উপত্যকা।',org:'পুরোনো V আকৃতির নদী উপত্যকা দিয়ে হিমবাহ নামার সময় একই সঙ্গে তলদেশ ও দুপাশ ক্ষয় করে চওড়া ও খাড়া করে দেয়। ধাপে ধাপে হিমসিঁড়ি, খাঁজে প্যাটারনস্টার হ্রদ।',ex:'ইয়োসেমাইট উপত্যকা (যুক্তরাষ্ট্র)',tip:'নদী V আঁকে, হিমবাহ U আঁকে।'},
+{k:'hanging',n:'ঝুলন্ত উপত্যকা',en:'Hanging Valley',ag:'হিমবাহ',w:'ক্ষয়',def:'প্রধান হিমদ্রোণীর ওপরে ঝুলে থাকা উপহিমবাহের উপত্যকা।',org:'প্রধান হিমবাহ বড় বলে বেশি গভীর ক্ষয় করে, ছোট উপহিমবাহ কম। বরফ গলে গেলে শাখা উপত্যকা উঁচুতে ঝুলে থাকে, সেখান থেকে জলপ্রপাত পড়ে।',ex:'বদ্রীনাথের কাছে ঋষিগঙ্গা উপত্যকা; ইয়োসেমাইটে ভারনাল ও নেভাদা জলপ্রপাত',tip:'বড় দাদা গভীরে নামে, ছোট ভাই ওপরে ঝোলে।'},
+{k:'roche',n:'রসে মোতানে',en:'Roche Moutonnée',ag:'হিমবাহ',w:'ক্ষয়',def:'হিমবাহ উপত্যকায় যে উঁচু ঢিবির প্রতিবাত অংশ মসৃণ ও ক্রমঢালু আর অনুবাত অংশ এবড়োখেবড়ো খাড়া। দূর থেকে শুয়ে থাকা ভেড়ার মতো (Sheep Rock)।',org:'হিমবাহের দিকের অংশে অবঘর্ষে মসৃণ হয়; উল্টো দিকে উৎপাটনে শিলা খুলে গিয়ে খাড়া ও ভাঙা হয়।',ex:'কাশ্মীরের লিডার উপত্যকা; নাম দেন সসার (১৮০৪)',tip:'আসার দিকে মসৃণ, যাওয়ার দিকে ভাঙা। ড্রামলিন ঠিক উল্টো।'},
+{k:'crag',n:'ক্র্যাগ ও টেল',en:'Crag & Tail',ag:'হিমবাহ',w:'ক্ষয়',def:'কঠিন শিলার উঁচু টিলা (ক্র্যাগ) এবং তার পিছনে সরু মৃদু ঢালু নরম শিলার ল্যাজ (টেল)।',org:'কঠিন শিলাস্তূপ হিমবাহের পথে খাড়া দাঁড়িয়ে থাকে এবং পিছনের নরম শিলাকে ক্ষয় থেকে রক্ষা করে।',ex:'এডিনবরা শহর, রয়্যাল মাইল ক্র্যাগের ওপর (স্কটল্যান্ড)',tip:'ক্র্যাগ মাথা, টেল ল্যাজ।'},
+{k:'fjord',n:'ফিয়র্ড',en:'Fjord',ag:'হিমবাহ',w:'ক্ষয়',def:'উচ্চ অক্ষাংশে উপকূলে সমুদ্রে ডুবে থাকা গভীর, খাড়া দেয়ালের হিমবাহ উপত্যকা।',org:'মহাদেশীয় হিমবাহ উপকূলে উপত্যকাকে সমুদ্রপৃষ্ঠের চেয়েও গভীর করে কাটে; বরফ গলার পর সমুদ্রজলে ভরে যায়।',ex:'নরওয়ে “ফিয়র্ডের দেশ”; স্কোরসবি সুন্দ (দীর্ঘতম, ৩৫০ কিমি); স্কেলটন ইনলেট (গভীরতম, ১৯৩৩ মি)',tip:'U উপত্যকা + সমুদ্রের জল = ফিয়র্ড।'},
+{k:'moraine',n:'গ্রাবরেখা',en:'Moraine',ag:'হিমবাহ',w:'সঞ্চয়',def:'হিমবাহবাহিত শিলাখণ্ড, নুড়ি, কাঁকর উপত্যকার দুপাশে, মাঝে ও সামনে প্রাচীরের মতো জমে যে ভূমিরূপ।',org:'হিমবাহ গলে গেলে তার বয়ে আনা মিশ্র পদার্থ যেখানে ছিল সেখানেই জমে থাকে। অবস্থান অনুযায়ী ৬ প্রকার: পার্শ্ব, মধ্য, প্রান্ত, ভূমি, হিমতল, হিমাবদ্ধ।',ex:'তিস্তা নদীর উচ্চ অববাহিকায় লাচুং ও লাচেন',tip:'“পাশে, মাঝে, প্রান্তে, ভূমিতে, তলে, আবদ্ধে” — ৬টি।'},
+{k:'outwash',n:'বহিঃবিধৌত সমভূমি',en:'Outwash Plain',ag:'যৌথ',w:'সঞ্চয়',def:'হিমবাহের পাদদেশে জলধারা দূরে দূরে পলি ছড়িয়ে যে বিস্তৃত মৃদু ঢালু সমভূমি গড়ে।',org:'প্রান্ত গ্রাবরেখা থেকে বেরোনো জলধারা কাছে ভারী, দূরে হালকা সূক্ষ্ম পদার্থ জমায়।',ex:'আইসল্যান্ডে স্যান্ডুর; নদী দ্বারা বিচ্ছিন্ন হলে ভ্যালি ট্রেন',tip:'বহিঃ = বাইরে, বিধৌত = ধোয়া। হিমবাহের বাইরে ধুয়ে আনা পলি।'},
+{k:'drumlin',n:'ড্রামলিন',en:'Drumlin',ag:'যৌথ',w:'সঞ্চয়',def:'হিমবাহবাহিত পদার্থ জমে উল্টানো নৌকা বা ডিমের মতো টিলা। প্রতিবাত দিক খাড়া ও অমসৃণ, অনুবাত দিক মৃদু ও মসৃণ।',org:'হিমবাহের অগ্রগমনে টিলা জমে, পরের অগ্রগমনে তা মসৃণ হয়ে ড্রামলিন হয়। ৩০–৬০ মি উঁচু, ১–৩ কিমি লম্বা।',ex:'স্কটল্যান্ড, আয়ারল্যান্ড। অনেকগুলি একসঙ্গে = ডিমের ঝুড়ি ভূমিরূপ',tip:'ডিমের ঝুড়ি। রসে মোতানের উল্টো।'},
+{k:'esker',n:'এসকার',en:'Esker',ag:'যৌথ',w:'সঞ্চয়',def:'হিমবাহবাহিত নুড়ি-বালি জমে দীর্ঘ আঁকাবাঁকা বাঁধের মতো শৈলশিরা (১০–৩০ মি উঁচু, কয়েক কিমি লম্বা)।',org:'হিমবাহ গলার সময় হিমাবদ্ধ গ্রাবরেখার পদার্থ হিমতল ও ভূমি গ্রাবরেখার ওপর থিতিয়ে পড়ে শৈলশিরা তৈরি করে।',ex:'ফিনল্যান্ডের পুনকাহারয়ু, আয়ারল্যান্ড',tip:'এসকার এঁকেবেঁকে চলে, যেন সাপ।'},
+{k:'kame',n:'কেম ও কেম সোপান',en:'Kame & Kame Terrace',ag:'যৌথ',w:'সঞ্চয়',def:'হিমবাহের প্রান্তে হ্রদে জলধারাবাহিত পদার্থ জমে ত্রিকোণাকার বদ্বীপের মতো ভূমিরূপ। উপত্যকার দেয়ালের পাশে ধাপের মতো হলে কেম সোপান।',org:'পাদদেশীয় হ্রদে নুড়ি-কাঁকর-বালি জমে ক্রমশ ভরাট হয়; দেয়াল সংলগ্ন বরফ গলে খসে পড়া শিলাখণ্ডে সোপান হয়।',ex:'স্কটল্যান্ডের ল্যামারমুয়ার উপত্যকা',tip:'কেম = হ্রদে বানানো ছোট বদ্বীপ।'},
+{k:'kettle',n:'কেটল ও কেটল হ্রদ',en:'Kettle',ag:'যৌথ',w:'সঞ্চয়',def:'বহিঃবিধৌত সমভূমিতে বরফের চাঁই গলে সৃষ্ট গর্ত; জল জমলে কেটল হ্রদ। মাঝের উঁচু অংশ নব।',org:'সমভূমির পলির নিচে চাপা পড়া বরফের চাঁই পরে গলে গেলে জায়গাটা বসে গর্ত হয়।',ex:'স্কটল্যান্ডের ওর্কনি দ্বীপ, উত্তর আমেরিকার প্রেইরি',tip:'কেটলি = জল রাখার পাত্র।'},
+{k:'deflation',n:'অপসারণ গর্ত',en:'Deflation Hollow',ag:'বায়ু',w:'ক্ষয়',def:'মরুভূমিতে বায়ু শিথিল বালি উড়িয়ে নিয়ে যাওয়ায় যে নিচু গর্ত বা খাত তৈরি হয়।',org:'উদ্ভিদহীন শুষ্ক মরুতে শিথিল বালি দীর্ঘদিন উড়ে যেতে যেতে জায়গাটা নিচু হয়। ভৌমজলস্তর পর্যন্ত পৌঁছালে মরূদ্যান হয়।',ex:'কাতারা, মিশর (বৃহত্তম); থর মরুভূমির ধান্দ; প্যাং কিয়াং হলো (মঙ্গোলিয়া)',tip:'অপসারণ = সরিয়ে দেওয়া। বালি সরে, গর্ত থাকে।'},
+{k:'gour',n:'গৌর',en:'Mushroom Rock',ag:'বায়ু',w:'ক্ষয়',def:'নিম্নাংশ সরু, ঊর্ধ্বাংশ চওড়া ব্যাঙের ছাতার মতো শিলাস্তূপ।',org:'ভূপৃষ্ঠ থেকে ১ মিটারের মধ্যে বালিপূর্ণ বায়ুর বেগ ও অবঘর্ষ সবচেয়ে বেশি, তাই নিচের অংশ বেশি ক্ষয় হয়ে সরু হয়।',ex:'সাহারা মরুভূমি; জার্মানিতে পিলজফেলসেন',tip:'মাশরুম রক = ব্যাঙের ছাতা।'},
+{k:'zeugen',n:'জিউগেন',en:'Zeugen',ag:'বায়ু',w:'ক্ষয়',def:'কঠিন ও কোমল শিলা অনুভূমিক স্তরে থাকলে চ্যাপ্টা মাথার টেবিলের মতো ভূমিরূপ (৩–৩০ মি উঁচু)।',org:'ফাটল বরাবর বায়ু নিচের কোমল শিলা দ্রুত ক্ষয় করে, ওপরের কঠিন শিলা ঢাকনার মতো থেকে যায়।',ex:'কালাহারি, সোনেরান, মোজাভে মরুভূমি',tip:'শুয়ে থাকা স্তর (অনুভূমিক) = টেবিল।'},
+{k:'yardang',n:'ইয়ারদাঙ',en:'Yardang',ag:'বায়ু',w:'ক্ষয়',def:'কঠিন ও কোমল শিলা উল্লম্বভাবে থাকলে মোরগের ঝুঁটির মতো ছুঁচালো মাথার শৈলশিরা (গড়ে ৭ মি)।',org:'বায়ুর সমান্তরালে থাকা কোমল শিলা ক্ষয় হয়ে সুড়ঙ্গ হয়; দুপাশের কঠিন শিলা খাড়া শিরা হয়ে দাঁড়িয়ে থাকে।',ex:'সাহারার টিবেস্টি মালভূমি (বৃহত্তম), লুট (ইরান), আটাকামা',tip:'দাঁড়ানো স্তর (উল্লম্ব) = ঝুঁটি।'},
+{k:'insel',n:'ইনসেলবার্জ',en:'Inselberg',ag:'বায়ু',w:'ক্ষয়',def:'মরু সমভূমির ওপর কঠিন শিলার গোলাকার, খাড়া ঢালের অনুচ্চ টিলা। জার্মান অর্থ ‘দ্বীপশৈল’।',org:'মরু ক্ষয়চক্রের শেষে নরম শিলা ক্ষয় হয়ে পেডিপ্লেন হয়, শুধু কঠিন গ্রানাইট-নিস অংশ দ্বীপের মতো দাঁড়িয়ে থাকে।',ex:'অস্ট্রেলিয়ার মাউন্ট ওলগা; কালাহারি',tip:'সমভূমির সমুদ্রে পাথরের দ্বীপ।'},
+{k:'barchan',n:'বার্খান',en:'Barchan (Transverse Dune)',ag:'বায়ু',w:'সঞ্চয়',def:'বায়ুর গতিপথে আড়াআড়িভাবে গড়ে ওঠা অর্ধচন্দ্রাকার বালিয়াড়ি, দুপাশে শিং।',org:'বায়ুমুখী দিক মৃদু ও উত্তল, পিছনের অনুবাত দিক খাড়া ও অবতল। বালিয়াড়ি সচল, বায়ুর দিকে এগোয়।',ex:'তুর্কিস্তান, সাহারা। তুর্কি শব্দ ‘বার্খান’ = বালির পাহাড়',tip:'আধখানা চাঁদ, শিং বায়ুর দিকে নয়, পিছনে।'},
+{k:'seif',n:'সিফ বালিয়াড়ি',en:'Seif (Longitudinal Dune)',ag:'বায়ু',w:'সঞ্চয়',def:'বায়ুপ্রবাহের সমান্তরালে তলোয়ারের মতো দীর্ঘ ও সংকীর্ণ বালিয়াড়ি।',org:'বার্খান ভেঙে একটি শিং বায়ুর দিকে লম্বা হয়ে সিফ তৈরি হয়। দুটি সিফের মাঝের বালিহীন পথ = করিডর (সাহারায় গাসি, গড)।',ex:'থর, কালাহারি; সাহারা ও নামিবে বৃহৎ সিফ। আরবি ‘সিফ’ = তলোয়ার',tip:'বার্খান আড়াআড়ি, সিফ সমান্তরাল।'},
+{k:'loess',n:'লোয়েস সমভূমি',en:'Loess Plain',ag:'বায়ু',w:'সঞ্চয়',def:'মরুভূমির হলুদ সূক্ষ্ম ধূলিকণা বায়ুবাহিত হয়ে দূরে জমে যে সমভূমি।',org:'ভাসমান অবস্থায় বাহিত সূক্ষ্ম কণা মরুর বাইরে আর্দ্র বায়ুর সংস্পর্শে বৃষ্টির সঙ্গে নেমে জমে।',ex:'হোয়াংহো অববাহিকা, চীন (বৃহত্তম, গোবি থেকে); জার্মানি, বেলজিয়াম; ভারতে উত্তর গুজরাট',tip:'জার্মান ‘Löss’ = স্থানচ্যুত বস্তু।'},
+{k:'wadi',n:'ওয়াদি',en:'Wadi',ag:'যৌথ',w:'যৌথ',def:'মরুভূমিতে অব্যবহৃত শুষ্ক নদীখাত। আরবি অর্থ ‘শুষ্ক উপত্যকা’।',org:'হঠাৎ বৃষ্টির বন্যার জল বালি-ধূলির সঙ্গে কর্দমধারা হয়ে বয়ে যায়, পরে জল শুকিয়ে খাতটা থেকে যায়।',ex:'থরে নালা, যুক্তরাষ্ট্রে ওয়াশ, স্পেনে অ্যারো',tip:'বৃষ্টি এলে নদী, না এলে খালি খাত।'},
+{k:'pediment',n:'পেডিমেন্ট, বাজাদা ও প্লায়া',en:'Pediment, Bajada & Playa',ag:'যৌথ',w:'যৌথ',def:'পেডিমেন্ট: পর্বতের পাদদেশে উন্মুক্ত শিলার মৃদু ঢালু সমভূমি (ঢাল ১°–৭°)। বাজাদা: তার নিচে পলল শঙ্কু জুড়ে গঠিত মৃদু ঢালু সমভূমি (৩°–৪°)। প্লায়া: পাহাড়ঘেরা নিচু ভূমিতে লবণাক্ত হ্রদ।',org:'বায়ু ও জলধারার ক্ষয়ে পাদদেশ সমতল হয় (পেডিমেন্ট), জলধারা পলি জমায় (বাজাদা), সব জলধারা মাঝের নিচু জায়গায় মিলে হ্রদ হয় (প্লায়া)।',ex:'আটলাস পর্বতের পাদদেশ (পেডিমেন্ট); রাজস্থানের সম্বর (প্লায়া), আরবে খাবারি, সাহারায় শটস',tip:'ওপর থেকে নিচে: পেডিমেন্ট → বাজাদা → প্লায়া। “পা-বা-প্লা”।'}
+];
+
+/* ---------- mind map ---------- */
+const MAP=[
+{id:'proc',name:'পদ্ধতি',full:'বহির্জাত প্রক্রিয়া: সংজ্ঞা ও পদ্ধতি',ag:'মূল',yt:'বহির্জাত প্রক্রিয়া মাধ্যমিক ভূগোল',kids:[
+ {n:'সংজ্ঞা',d:'ভূপৃষ্ঠের ওপর কাজ করা প্রাকৃতিক শক্তি দীর্ঘকাল ধরে ভূমিরূপের পরিবর্তন ঘটিয়ে সমতা আনে।'},
+ {n:'বৈশিষ্ট্য',kids:['ভূপৃষ্ঠের ওপরে কাজ করে','শক্তির মূল উৎস সূর্য','অতি ধীরে হয়','ক্ষয়ে উচ্চতা হ্রাস, অবক্ষেপণে বৃদ্ধি','শেষে সাধারণ তল গঠন']},
+ {n:'মাধ্যম',kids:['স্থিতিশীল শক্তি: উষ্ণতা, বায়ুর চাপ, আর্দ্রতা, বৃষ্টিপাত, শিশির','গতিশীল শক্তি: নদী, বায়ু, হিমবাহ, সমুদ্রতরঙ্গ, সমুদ্রস্রোত, ভৌমজল, জোয়ার-ভাটা']},
+ {n:'অবরোহণ (Degradation)',d:'ক্ষয়ে উচ্চতা কমে',kids:['আবহবিকার: শিলা স্বস্থানে চূর্ণ ও বিয়োজিত','পুঞ্জিত ক্ষয়: অভিকর্ষে ঢাল বেয়ে নামা (Mass Wasting)','ক্ষয়ীভবন: ক্ষয়জাত পদার্থ অন্যত্র বাহিত','উদাহরণ: গৌর, ইনসেলবার্জ']},
+ {n:'আরোহণ (Aggradation)',d:'সঞ্চয়ে নিচু স্থান ভরাট, উচ্চতা বাড়ে',kids:['উদাহরণ: প্লাবনভূমি, বদ্বীপ']},
+ {n:'জৈবিক প্রক্রিয়া',d:'উদ্ভিদ, প্রাণী ও মানুষ',kids:['জৈবিক ক্ষয়','জৈবিক সঞ্চয়']},
+ {n:'পর্যায়ন (Gradation)',d:'অবরোহণ + আরোহণ মিলে উঁচুনিচু ভূমি সমতল। নাম দেন চেম্বারলিন ও সলিসবেরি (১৯০৪); ‘গ্রেড’ শব্দ প্রথম গিলবার্ট (১৮৭৬)।'},
+ {n:'নগ্নীভবন (Denudation)',d:'আবহবিকার + পুঞ্জিত ক্ষয় + ক্ষয়ীভবন। নিচের শিলা উন্মুক্ত হয়।'}
+]},
+{id:'river',name:'নদী',full:'নদীর কাজ',ag:'নদী',yt:'নদীর কাজ ভূমিরূপ মাধ্যমিক',kids:[
+ {n:'পরিভাষা',kids:['নদী উপত্যকা: উৎস থেকে মোহানা পর্যন্ত দুপাশের উঁচুভূমির মাঝের নিচু অংশ (নীল দীর্ঘতম)','নদী অববাহিকা: প্রধান নদী ও উপনদী-শাখানদী মিলিয়ে বিস্তৃত অঞ্চল (আমাজন বৃহত্তম, ভারতে গঙ্গা)','ধারণ অববাহিকা: উৎস অঞ্চলে অসংখ্য উপনদীসহ জল সংগ্রহের ক্ষেত্র','জলবিভাজিকা: দুটি অববাহিকাকে আলাদা করা উচ্চভূমি (বিন্ধ্য পর্বত; মধ্য এশিয়ার পার্বত্য অঞ্চল বৃহত্তম)','নদী প্রবাহ: কিউসেক (ঘনফুট/সেকেন্ড), কিউমেক (ঘনমিটার/সেকেন্ড)','আদর্শ নদী: তিনটি গতিই স্পষ্ট (গঙ্গা, সিন্ধু, নীল, আমাজন, মিসিসিপি)']},
+ {n:'তিন গতি',kids:['উচ্চগতি: প্রধান কাজ ক্ষয় (গোমুখ–হরিদ্বার, ২৮০ কিমি)','মধ্যগতি: প্রধান কাজ বহন (হরিদ্বার–ধুলিয়ান, ১২৭০ কিমি)','নিম্নগতি: প্রধান কাজ সঞ্চয় (ধুলিয়ান–সাগরদ্বীপ, ৫২০ কিমি)']},
+ {n:'ক্ষয়ের ৫ পদ্ধতি',kids:['জলপ্রবাহ ক্ষয়','বুদবুদ ক্ষয় (১ সেমি বুদবুদ = ১৮ কেজি হাতুড়ির আঘাত)','অবঘর্ষ ক্ষয়','ঘর্ষণ ক্ষয়','দ্রবণ ক্ষয় (জিপসাম, ডলোমাইট, চুনাপাথর)']},
+ {n:'বহনের ৪ পদ্ধতি',kids:['দ্রবণ','ভাসমান (পলি, বালি, কাদা)','লম্ফদান (বড় নুড়ি লাফিয়ে)','আকর্ষণ (ভারী প্রস্তরখণ্ড গড়িয়ে)','ষষ্ঠঘাতের সূত্র: বেগ ২ গুণ → বহনক্ষমতা ৬৪ গুণ (হপকিনস, ১৮৪২)']},
+ {n:'ক্ষয়জাত ভূমিরূপ (উচ্চগতি)',kids:['I/V আকৃতির উপত্যকা','গিরিখাত','ক্যানিয়ন','শৃঙ্খলিত শৈলশিরা','খরস্রোত (র‍্যাপিড)','জলপ্রপাত (কাসকেড, ক্যাটারাক্ট)','প্রপাতকূপ','মন্থকূপ']},
+ {n:'সঞ্চয়জাত ভূমিরূপ (মধ্য ও নিম্নগতি)',kids:['পলল শঙ্কু ও পলল ব্যজনী','মিয়েন্ডার','খাড়া পাড় ও ঢালু পাড়','অশ্বক্ষুরাকৃতি হ্রদ','প্লাবনভূমি','স্বাভাবিক বাঁধ (লিভি)','খাঁড়ি (ওব নদী, দীর্ঘতম ৮৮৫ কিমি)','বদ্বীপ: ধনুকাকৃতি, তীক্ষ্ণাগ্র, পাখির পা']},
+ {n:'বদ্বীপ গঠনের শর্ত',kids:['পলির আধিক্য','দীর্ঘ মধ্য ও নিম্নপ্রবাহ','অগভীর সমুদ্র','শান্ত সমুদ্র (স্রোত ও জোয়ার কম)','অধিক লবণতা ও ঘনত্ব','স্থলবেষ্টিত সমুদ্র বা হ্রদ','সমুদ্রতলের স্থিরতা']}
+]},
+{id:'glacier',name:'হিমবাহ',full:'হিমবাহের কাজ',ag:'হিমবাহ',yt:'হিমবাহের কাজ ভূমিরূপ মাধ্যমিক',kids:[
+ {n:'হিমবাহ কী',d:'অতি শীতল অঞ্চলে অভিকর্ষে অতি ধীরে প্রবহমান জমাটবাঁধা বরফস্তূপ। গঠন: নেভে → ফির্ন → হিমবাহ। দ্রুততম জেকবসভান (দিনে ৪৬ মি), ভারতে বৃহত্তম সিয়াচেন।'},
+ {n:'প্রকার (আলমান, ১৯৪৮)',kids:['পার্বত্য বা উপত্যকা হিমবাহ: হুবার্ড (বৃহত্তম), সিয়াচেন, গঙ্গোত্রী','পাদদেশীয় হিমবাহ: মালাসপিনা (বৃহত্তম); অগ্রভাগ লোব','মহাদেশীয় হিমবাহ: আন্টার্কটিকা (ল্যাম্বার্ট বৃহত্তম), গ্রিনল্যান্ড']},
+ {n:'পরিভাষা',kids:['হিমরেখা: এর ওপরে সারা বছর তুষার থাকে (স্থায়ী ও অস্থায়ী)','হিমশৈল: সমুদ্রে ভাসমান বরফস্তূপ, মাত্র ১/৯ অংশ জলের ওপর (টাইটানিক, ১৯১২)','ক্রেভাস: হিমবাহের ওপরের ফাটল','বার্গস্রুন্ড: পর্বতগাত্র ও হিমবাহের মাঝের গভীর ফাটল','নুনাটাক: বরফের ওপর জেগে থাকা পর্বতশৃঙ্গ']},
+ {n:'ক্ষয়ের ২ পদ্ধতি',kids:['উৎপাটন (Plucking): আলগা পাথর উপড়ে নেওয়া','অবঘর্ষ (Abrasion): বাহিত পাথরে তলদেশ ঘষে মসৃণ']},
+ {n:'ক্ষয়জাত ভূমিরূপ',kids:['করি বা সার্ক','এরিটি','পিরামিড চূড়া','কর্তিত শৈলশিরা','হিমদ্রোণী (U উপত্যকা)','হিমসিঁড়ি ও প্যাটারনস্টার হ্রদ','ঝুলন্ত উপত্যকা','রসে মোতানে','ক্র্যাগ ও টেল','ফিয়র্ড']},
+ {n:'সঞ্চয়জাত: গ্রাবরেখা ৬ প্রকার',kids:['পার্শ্ব','মধ্য','প্রান্ত','ভূমি','হিমতল','হিমাবদ্ধ']},
+ {n:'হিমবাহ ও জলধারার যৌথ কাজ',kids:['বহিঃবিধৌত সমভূমি (ভ্যালি ট্রেন)','ড্রামলিন','কেম ও কেম সোপান','এসকার','কেটল ও কেটল হ্রদ']}
+]},
+{id:'wind',name:'বায়ু',full:'বায়ুর কাজ',ag:'বায়ু',yt:'বায়ুর কাজ ভূমিরূপ মাধ্যমিক',kids:[
+ {n:'কোথায় প্রাধান্য',kids:['মরু অঞ্চল (বৃষ্টি ২৫ সেমির কম)','মরুপ্রায় অঞ্চল (২৫–৫০ সেমি)','উন্মুক্ত সমুদ্র উপকূল','কারণ: বাধা নেই, আলগা ভূমি, যান্ত্রিক আবহবিকার, তীব্র বায়ু']},
+ {n:'মরুভূমির প্রকার',kids:['উষ্ণ মরু: সাহারা (বৃহত্তম), কালাহারি, থর, সোনেরান, আটাকামা (শুষ্কতম)','নাতিশীতোষ্ণ মরু: গোবি (বৃহত্তম শীতল), তাকলামাকান, প্যাটাগোনিয়া','শীতল মরু: আন্টার্কটিকা, লাদাখ','গঠন অনুযায়ী: বালিময় (আর্গ, কুম), শিলাময় (হামাদা), পাথুরে (রেগ, সেরির)']},
+ {n:'ক্ষয়ের ৩ পদ্ধতি',kids:['অপসারণ (Deflation)','অবঘর্ষ (Abrasion)','ঘর্ষণ (Attrition)']},
+ {n:'বহনের ৩ পদ্ধতি',kids:['ভাসমান (০.০৫ মিমির কম)','লম্ফদান (০.০৫–২ মিমি)','গড়ানো (২ মিমির বেশি)']},
+ {n:'সঞ্চয়ের ৩ পদ্ধতি',kids:['অধঃপাতন','উপলেপন','অধিগ্রহণ']},
+ {n:'ক্ষয়জাত ভূমিরূপ',kids:['অপসারণ গর্ত','গৌর','জিউগেন','ইয়ারদাঙ','ইনসেলবার্জ']},
+ {n:'সঞ্চয়জাত ভূমিরূপ',kids:['বালিয়াড়ি: বার্খান (তির্যক), সিফ (অনুদৈর্ঘ্য)','মস্তক, পুচ্ছ, পার্শ্বস্থ, অগ্রবর্তী বালিয়াড়ি','লোয়েস সমভূমি','ধ্রিয়ান (ভারতের চলমান বালিয়াড়ি), টেরিস (কেরল)']},
+ {n:'বায়ু ও জলধারার যৌথ কাজ',kids:['ওয়াদি','পেডিমেন্ট','প্লায়া হ্রদ','বাজাদা','হঠাৎ বন্যা ও কর্দমধারা']}
+]},
+{id:'env',name:'পরিবেশ',full:'সুন্দরবন ও মরু প্রসারণ',ag:'যৌথ',yt:'সুন্দরবন জলবায়ু পরিবর্তন মরু প্রসারণ মাধ্যমিক',kids:[
+ {n:'সুন্দরবন',d:'ভারত ও বাংলাদেশের সক্রিয় বদ্বীপ; বিশ্বের বৃহত্তম ম্যানগ্রোভ অরণ্য। পশ্চিমবঙ্গে ৪২০০ বর্গকিমি। ১৯৮৭ ইউনেস্কো বিশ্ব ঐতিহ্য, ১৯৮৯ বায়োস্ফিয়ার রিজার্ভ।'},
+ {n:'জলবায়ু পরিবর্তনের প্রাকৃতিক প্রভাব',kids:['সমুদ্রজলের উষ্ণতা বৃদ্ধি','ঘূর্ণিঝড় ও জলমগ্নতা (আয়লা, ২০০৯)','সমুদ্রতলের উত্থান ও ভূভাগের অবলুপ্তি','উপকূলের বিনাশ','বনভূমি ও বন্যপ্রাণী হ্রাস (সুন্দরী ৪০%, জিয়া ৪৫% কমেছে)']},
+ {n:'আর্থসামাজিক প্রভাব',kids:['কৃষিজমি ধ্বংস, লবণাক্ততা','জনবসতি পরিবর্তন, পরিবেশ উদ্বাস্তু']},
+ {n:'ভ্যানিশিং আইল্যান্ড',kids:['লোহাচড়া: ২০০৬-এ সম্পূর্ণ নিশ্চিহ্ন (বিশ্বের প্রথম মনুষ্যবসতিযুক্ত)','নিউমুর (দক্ষিণ তালপট্টি): ১৯৭০-এর ভোলা ঘূর্ণিঝড়ে জেগে ওঠে, ২০১০-এ ডুবে যায়','ঘোড়ামারা: ৩০ বছরে প্রায় ৭৫% বিলীন; বাসিন্দারা সাগরদ্বীপে']},
+ {n:'মরু প্রসারণের কারণ',kids:['প্রাকৃতিক: জলবায়ু পরিবর্তন, খরা বৃদ্ধি, ভূমিক্ষয় বৃদ্ধি','আর্থসামাজিক: ত্রুটিপূর্ণ কৃষি, বৃক্ষচ্ছেদন, যথেচ্ছ পশুচারণ','থর বছরে ০.৮৬% হারে পূর্ব ও উত্তর-পূর্বে বাড়ছে; সাহারা বছরে ৫–১০ কিমি দক্ষিণে']},
+ {n:'ফলাফল',kids:['মাটির উর্বরতা নষ্ট','জীববৈচিত্র্য হ্রাস','ভৌমজলের সংকট','পরিবেশগত পরিব্রাজন']},
+ {n:'প্রতিরোধ',kids:['বৃক্ষরোপণ (সবচেয়ে গুরুত্বপূর্ণ); গ্রেট গ্রিন ওয়াল','বালিয়াড়ির প্রসার রোধ (CAZRI, যোধপুর)','পশুচারণ ভূমির উন্নতি','বৈজ্ঞানিক জলসেচ, খরা প্রতিরোধী শস্য (মিলেট)']}
+]}
+];
+
+/* ---------- tricks ---------- */
+const TRICKS=[
+{ag:'নদী',t:'নদীর তিন গতির কাজ',mn:'উঁচুতে ক্ষয়, মাঝে বয়, নিচে জমা হয়',d:[['উঁচুতে','উচ্চগতি → ক্ষয়'],['মাঝে','মধ্যগতি → বহন'],['নিচে','নিম্নগতি → সঞ্চয়']]},
+{ag:'নদী',t:'নদীর ক্ষয়ের ৫ পদ্ধতি',mn:'জবু অঘোর দাদু',d:[['জ','জলপ্রবাহ'],['বু','বুদবুদ'],['অ','অবঘর্ষ'],['ঘো','ঘর্ষণ'],['দা','দ্রবণ']]},
+{ag:'নদী',t:'নদীর বহনের ৪ পদ্ধতি',mn:'দাদা ভেসে লাফিয়ে আঁকড়ে ধরে',d:[['দাদা','দ্রবণ'],['ভেসে','ভাসমান'],['লাফিয়ে','লম্ফদান'],['আঁকড়ে','আকর্ষণ']]},
+{ag:'নদী',t:'নদীর ক্ষয়জাত ভূমিরূপ (ওপর থেকে নিচে)',mn:'V গিরি ক্যানে শৃঙ্খল খুলে প্রপাতে মন্থন',d:[['V','V উপত্যকা'],['গিরি','গিরিখাত'],['ক্যানে','ক্যানিয়ন'],['শৃঙ্খল','শৃঙ্খলিত শৈলশিরা'],['খুলে','খরস্রোত'],['প্রপাতে','জলপ্রপাত, প্রপাতকূপ'],['মন্থন','মন্থকূপ']]},
+{ag:'নদী',t:'নদীর সঞ্চয়জাত ভূমিরূপ (পাহাড় থেকে সমুদ্র)',mn:'পাখা মেলে মিয়াঁ, ঘোড়ায় চড়ে প্লাবনে বাঁধ, খাঁড়ি পেরিয়ে বদ্বীপ',d:[['পাখা','পলল ব্যজনী'],['মিয়াঁ','মিয়েন্ডার'],['ঘোড়ায়','অশ্বক্ষুরাকৃতি হ্রদ'],['প্লাবনে','প্লাবনভূমি'],['বাঁধ','স্বাভাবিক বাঁধ'],['খাঁড়ি','খাঁড়ি'],['বদ্বীপ','বদ্বীপ']]},
+{ag:'নদী',t:'বদ্বীপের ৩ প্রকার ও উদাহরণ',mn:'গঙ্গা ধনুক টানে, টাইবার দাঁত দেখায়, মিসিসিপি পাখি ওড়ায়',d:[['ধনুক','ধনুকাকৃতি: গঙ্গা, নীল, হোয়াংহো'],['দাঁত','তীক্ষ্ণাগ্র: টাইবার, এব্রো'],['পাখি','পাখির পা: মিসিসিপি-মিসৌরি']]},
+{ag:'হিমবাহ',t:'হিমবাহের ক্ষয়জাত ভূমিরূপ: পাহাড়চূড়া থেকে সমুদ্র',mn:'চূড়ায় পিরামিড, শিরায় এরিটি, কোলে করি; নিচে কাটা শিরা, U দ্রোণী, ঝুলন্ত ভাই, ভেড়া, ক্র্যাগ — শেষে ফিয়র্ড',d:[['চূড়া','পিরামিড চূড়া'],['শিরা','এরিটি'],['কোল','করি'],['কাটা শিরা','কর্তিত শৈলশিরা'],['U','হিমদ্রোণী'],['ঝুলন্ত','ঝুলন্ত উপত্যকা'],['ভেড়া','রসে মোতানে'],['ক্র্যাগ','ক্র্যাগ ও টেল'],['সমুদ্র','ফিয়র্ড']]},
+{ag:'হিমবাহ',t:'গ্রাবরেখার ৬ প্রকার',mn:'পাশে, মাঝে, প্রান্তে, ভূমিতে, তলে, আবদ্ধে',d:[['পাশে','পার্শ্ব'],['মাঝে','মধ্য'],['প্রান্তে','প্রান্ত'],['ভূমিতে','ভূমি'],['তলে','হিমতল'],['আবদ্ধে','হিমাবদ্ধ']]},
+{ag:'যৌথ',t:'হিমবাহ ও জলধারার যৌথ ভূমিরূপ',mn:'বড় ড্রাম কেমন এসে কেটলিতে পড়ল!',d:[['বড়','বহিঃবিধৌত সমভূমি'],['ড্রাম','ড্রামলিন'],['কেমন','কেম'],['এসে','এসকার'],['কেটলি','কেটল']]},
+{ag:'হিমবাহ',t:'রসে মোতানে বনাম ড্রামলিন',mn:'ভেড়া আসার দিকে মসৃণ, ডিম আসার দিকে খাড়া',d:[['ভেড়া','রসে মোতানে: প্রতিবাত মসৃণ, অনুবাত খাড়া'],['ডিম','ড্রামলিন: প্রতিবাত খাড়া, অনুবাত মৃদু']]},
+{ag:'বায়ু',t:'বায়ুর ক্ষয় পদ্ধতি',mn:'উড়িয়ে নেয়, ঠুকে দেয়, ঠোকাঠুকি করে',d:[['উড়িয়ে','অপসারণ'],['ঠুকে','অবঘর্ষ'],['ঠোকাঠুকি','ঘর্ষণ']]},
+{ag:'বায়ু',t:'বায়ুর বহন পদ্ধতি (ছোট থেকে বড় কণা)',mn:'ধুলো ভাসে, বালি লাফায়, নুড়ি গড়ায়',d:[['ভাসে','ভাসমান'],['লাফায়','লম্ফদান'],['গড়ায়','গড়ানো']]},
+{ag:'বায়ু',t:'বায়ুর সঞ্চয় পদ্ধতি',mn:'অধম উপরে অধিকার করে',d:[['অধম','অধঃপাতন'],['উপরে','উপলেপন'],['অধিকার','অধিগ্রহণ']]},
+{ag:'বায়ু',t:'বায়ুর ক্ষয়জাত ভূমিরূপ: ছবি দিয়ে মনে রাখো',mn:'গর্ত, ছাতা, টেবিল, ঝুঁটি, দ্বীপ',d:[['গর্ত','অপসারণ গর্ত'],['ছাতা','গৌর'],['টেবিল','জিউগেন'],['ঝুঁটি','ইয়ারদাঙ'],['দ্বীপ','ইনসেলবার্জ']]},
+{ag:'বায়ু',t:'জিউগেন বনাম ইয়ারদাঙ',mn:'শুয়ে থাকলে টেবিল, দাঁড়িয়ে থাকলে ঝুঁটি',d:[['শুয়ে','অনুভূমিক স্তর → জিউগেন'],['দাঁড়িয়ে','উল্লম্ব স্তর → ইয়ারদাঙ']]},
+{ag:'বায়ু',t:'বার্খান বনাম সিফ',mn:'চাঁদ আড়াআড়ি, তলোয়ার সোজাসুজি',d:[['চাঁদ','বার্খান: বায়ুর আড়াআড়ি'],['তলোয়ার','সিফ: বায়ুর সমান্তরাল']]},
+{ag:'যৌথ',t:'মরুতে বায়ু ও জলধারার যৌথ ভূমিরূপ',mn:'ওয়া! পা বাজিয়ে প্লেয়ার নাচে',d:[['ওয়া','ওয়াদি'],['পা','পেডিমেন্ট (পাদদেশ)'],['বাজিয়ে','বাজাদা'],['প্লেয়ার','প্লায়া']]},
+{ag:'মূল',t:'নগ্নীভবন',mn:'আপুক্ষ = নগ্ন',d:[['আ','আবহবিকার'],['পু','পুঞ্জিত ক্ষয়'],['ক্ষ','ক্ষয়ীভবন']]},
+{ag:'যৌথ',t:'মরু প্রসারণ রোধ',mn:'গাছ লাগাও, বালি থামাও, পশু সামলাও, জল মেপে দাও',d:[['গাছ','বৃক্ষরোপণ'],['বালি','বালিয়াড়ির প্রসার রোধ'],['পশু','পশুচারণ ভূমির উন্নতি'],['জল','বৈজ্ঞানিক জলসেচ ও কৃষি']]}
+];
+const NUMS=[
+['বিশ্বের উচ্চতম জলপ্রপাত: সান্টো অ্যাঞ্জেল (ভেনেজুয়েলা)','৯৭৯ মি'],
+['ভারতের উচ্চতম জলপ্রপাত: কুঞ্চিকল (কর্ণাটক)','৪৫৫ মি'],
+['বিস্তৃততম জলপ্রপাত: ইগুয়াজু (ব্রাজিল)','২.৭ কিমি'],
+['গভীরতম গিরিখাত: কালী গণ্ডকী (নেপাল)','৫৫৭১ মি'],
+['গভীরতম ক্যানিয়ন: সাংপো','৫৫০০ মি'],
+['দীর্ঘতম খাঁড়ি: ওব নদী (রাশিয়া)','৮৮৫ কিমি'],
+['বেগ দ্বিগুণ হলে বহনক্ষমতা (ষষ্ঠঘাত সূত্র)','৬৪ গুণ'],
+['দ্রুততম হিমবাহ: জেকবসভান (গ্রিনল্যান্ড)','৪৬ মি/দিন'],
+['হিমশৈলের জলের ওপরে থাকা অংশ','১/৯'],
+['দীর্ঘতম ফিয়র্ড: স্কোরসবি সুন্দ','৩৫০ কিমি'],
+['গভীরতম ফিয়র্ড: স্কেলটন ইনলেট (আন্টার্কটিকা)','১৯৩৩ মি'],
+['বৃহত্তম অপসারণ গর্ত: কাতারা (মিশর)','—'],
+['বৃহত্তম লোয়েস সমভূমি: হোয়াংহো অববাহিকা','—'],
+['বিশ্বের উষ্ণ মরুভূমি পৃথিবীর স্থলভাগের','২০%'],
+['মরুকরণে আক্রান্ত পৃথিবীর জমি','৩৫%'],
+['সুন্দরবনের পশ্চিমবঙ্গ অংশের আয়তন','৪২০০ বর্গকিমি'],
+['লোহাচড়া দ্বীপ নিশ্চিহ্ন','২০০৬'],
+['নিউমুর দ্বীপ ডুবে যায়','২০১০']
+];
+
+/* ---------- quiz banks ---------- */
+const MCQ=[
+['বদ্বীপ নদীর কোন গতিতে দেখা যায়?',['উচ্চ','মধ্য','মাঝারি','নিম্ন'],3,'মোহানার কাছে বেগ কমে পলি জমে।'],
+['আদর্শ নদীর কয়টি গতি থাকে?',['২টি','৩টি','৪টি','৫টি'],1,'উচ্চ, মধ্য ও নিম্ন — তিনটিই স্পষ্ট।'],
+['প্লাবনভূমিতে দেখা যায়—',['পলল ব্যজনী','লিভি','মন্থকূপ','প্রপাতকূপ'],1,'লিভি বা স্বাভাবিক বাঁধ প্লাবনভূমির পাশে গড়ে।'],
+['হিমবাহ উপত্যকার আকৃতি—',['I','V','U','L'],2,'নদী V, হিমবাহ U।'],
+['ভারতের দীর্ঘতম হিমবাহ—',['জেমু','গঙ্গোত্রী','সিয়াচেন','হুবার্ড'],2,'কারাকোরামের সিয়াচেন। হুবার্ড আলাস্কায়।'],
+['ম্যাটারহর্ন কীসের উদাহরণ?',['এরিটি','করি','পিরামিড চূড়া','ফিয়র্ড'],2,'‘হর্ন’ নামটাই এসেছে ম্যাটারহর্ন থেকে।'],
+['গৌর কোন শক্তির ক্ষয়জাত ভূমিরূপ?',['নদী','বায়ু','হিমবাহ','তরঙ্গ'],1,'বায়ুর অবঘর্ষে নিচের অংশ সরু হয়।'],
+['পৃথিবীর বৃহত্তম অপসারণ গর্ত—',['সম্বর','কাতারা','পুষ্কর','উলার'],1,'মিশরের কাতারা।'],
+['অবরোহণ প্রক্রিয়ার উদাহরণ—',['আবহবিকার','ভূমিকম্প','অগ্ন্যুৎপাত','উল্কাপাত'],0,'অবরোহণ = আবহবিকার + পুঞ্জিত ক্ষয় + ক্ষয়ীভবন।'],
+['উত্তর আমেরিকার মরুভূমি—',['সোনেরান','আটাকামা','প্যাটাগোনিয়া','থর'],0,'আটাকামা ও প্যাটাগোনিয়া দক্ষিণ আমেরিকায়।'],
+['ভূমিরূপ পরিবর্তনকারী বহির্জাত শক্তির মূল উৎস—',['সূর্য','চাঁদ','ভূ-অভ্যন্তর','মহাকর্ষ'],0,'বহির্জাত প্রক্রিয়ার শক্তির মূল উৎস সূর্য।'],
+['নদীর জলপ্রবাহ মাপার একক—',['নট','কিউসেক','মিলিবার','হেক্টর'],1,'কিউসেক = ঘনফুট প্রতি সেকেন্ড।'],
+['নদীর গতিবেগ দ্বিগুণ হলে বহনক্ষমতা বাড়ে—',['৪ গুণ','১৬ গুণ','৩২ গুণ','৬৪ গুণ'],3,'ষষ্ঠঘাতের সূত্র: ২⁶ = ৬৪।'],
+['মন্থকূপ সৃষ্টি হয় কার ক্ষয়কাজে?',['নদী','বায়ু','হিমবাহ','সমুদ্রতরঙ্গ'],0,'নদীর অবঘর্ষ ক্ষয়ে।'],
+['হিমসিঁড়ির খাঁজে বরফগলা জল জমে সৃষ্টি হয়—',['প্লায়া হ্রদ','করি হ্রদ','প্যাটারনস্টার হ্রদ','কেটল হ্রদ'],2,'হিমসিঁড়ির ধাপে ধাপে মালার মতো হ্রদ।'],
+['বদ্বীপের ‘ডেল্টা’ নামকরণ করেন—',['পাওয়েল','থর্নবেরি','হেরোডোটাস','আলমান'],2,'নীল নদের মোহানা দেখে গ্রিক অক্ষর Δ-এর সঙ্গে মিল পান।'],
+['পৃথিবীর বিস্তৃততম জলপ্রপাত—',['সান্টো অ্যাঞ্জেল','ইগুয়াজু','কুঞ্চিকল','দুধসাগর'],1,'ইগুয়াজু, ২.৭ কিমি।'],
+['বইয়ের মতে নদীর মধ্যগতিতে প্রধান কাজ—',['ক্ষয়','বহন','সঞ্চয়','উৎপাটন'],1,'মধ্যগতি বা সমভূমি প্রবাহ বহনকাজে ব্যস্ত।'],
+['সুন্দরবনের দ্বীপগুলি ডুবে যাওয়ার মূল কারণ—',['অত্যধিক বৃষ্টিপাত','সমুদ্র জলতলের উত্থান','ভূমিকম্প','নদীর গতিপথ পরিবর্তন'],1,'বিশ্ব উষ্ণায়নে বরফ গলে সমুদ্রতল উঠছে।'],
+['নিউমুর দ্বীপ কোন ঘূর্ণিঝড়ের পর জেগে ওঠে?',['আয়লা','ভোলা','আমফান','ফণী'],1,'১৯৭০ সালের ভোলা ঘূর্ণিঝড়ে।'],
+['বিশ্বের প্রথম মনুষ্যবসতিযুক্ত দ্বীপ যা সম্পূর্ণ ডুবে যায়—',['লোহাচড়া','ঘোড়ামারা','সাগরদ্বীপ','নিউমুর'],0,'২০০৬ সালের ডিসেম্বরে।'],
+['আরবি শব্দ ‘সিফ’-এর অর্থ—',['চাঁদ','তলোয়ার','বালির পাহাড়','শুকনো উপত্যকা'],1,'বালির পাহাড় হল ‘বার্খান’-এর অর্থ।'],
+['ড্রামলিনের আকৃতি—',['উল্টানো নৌকা','অর্ধচন্দ্র','তলোয়ার','হাতলযুক্ত চেয়ার'],0,'বা ডিমের মতো।'],
+['পৃথিবীর বৃহত্তম লোয়েস সমভূমি—',['হোয়াংহো অববাহিকা','থর','জার্মানি','মিসিসিপি'],0,'গোবি মরুভূমির ধূলিতে গঠিত।'],
+['রসে মোতানের অনুবাত দিক—',['মসৃণ ও মৃদু','এবড়োখেবড়ো ও খাড়া','সমতল','বালিতে ঢাকা'],1,'উৎপাটনে ভাঙা ও খাড়া।'],
+['ভারতের উচ্চতম জলপ্রপাত—',['যোগ','কুঞ্চিকল','দুধসাগর','চিত্রকূট'],1,'কর্ণাটকের বারাহি নদীতে, ৪৫৫ মি।'],
+['হিমশৈলের কত অংশ জলের ওপর থাকে?',['১/২','১/৪','১/৯','১/১০'],2,'বাকি ৮/৯ অংশ ডুবে থাকে, তাই জাহাজের বিপদ।'],
+['পৃথিবীর দ্রুততম হিমবাহ—',['সিয়াচেন','জেকবসভান','মালাসপিনা','ল্যাম্বার্ট'],1,'দিনে প্রায় ৪৬ মিটার।'],
+['মরু প্রসারণ রোধের সবচেয়ে গুরুত্বপূর্ণ উপায়—',['বৃক্ষরোপণ','পশুচারণ বৃদ্ধি','খনিজ উত্তোলন','অতিরিক্ত জলসেচ'],0,'গাছের প্রাচীর বায়ু ও বালি আটকায়।'],
+['পৃথিবীর দীর্ঘতম খাঁড়ি—',['টেমস','ওব','হুগলি','আমাজন'],1,'রাশিয়ার ওব নদী, ৮৮৫ কিমি।'],
+['‘গ্রেড’ শব্দটি প্রথম ব্যবহার করেন—',['গিলবার্ট','ডেভিস','হেরোডোটাস','হপকিনস'],0,'গ্রোভ কার্ল গিলবার্ট, ১৮৭৬।'],
+['ক্যানিয়ন গঠিত হয়—',['আর্দ্র অঞ্চলে','শুষ্ক অঞ্চলে','মেরু অঞ্চলে','উপকূলে'],1,'বৃষ্টি কম বলে পার্শ্বক্ষয় হয় না।']
+];
+const FILL=[
+['আরোহণ প্রক্রিয়ায় ভূমির উচ্চতা ____ হয়।',['বৃদ্ধি','হ্রাস','অপরিবর্তিত','শূন্য'],0,'সঞ্চয়ে নিচু স্থান ভরাট হয়।'],
+['____ হল নদীর ক্ষয়কাজের একটি প্রক্রিয়া।',['অবঘর্ষ','অপসারণ','উৎপাটন','অধিগ্রহণ'],0,'অপসারণ বায়ুর, উৎপাটন হিমবাহের।'],
+['নদীর সঞ্চয়কাজ সবচেয়ে বেশি হয় ____ গতিতে।',['উচ্চ','মধ্য','নিম্ন','পার্বত্য'],2,'নিম্নগতি বা বদ্বীপ প্রবাহ।'],
+['হিমশৈল মূলত ____ হিমবাহ থেকে সৃষ্টি হয়।',['পার্বত্য','পাদদেশীয়','মহাদেশীয়','উপত্যকা'],2,'মহাদেশীয় হিমবাহের প্রান্ত সমুদ্রে ভেঙে পড়ে।'],
+['ড্রামলিন ____ আকৃতিবিশিষ্ট।',['উল্টানো নৌকার','অর্ধচন্দ্রাকার','চেয়ারের','টেবিলের'],0,'বা ডিমের মতো।'],
+['হিমবাহের আড়াআড়ি ফাটলকে ____ বলে।',['ক্রেভাস','মোরেন','টার্ন','নুনাটাক'],0,'অনুদৈর্ঘ্য ও আড়াআড়ি ক্রেভাস কাটাকাটি করলে আইস পিনাকল।'],
+['লোয়েস সমভূমি বায়ুর ____ কাজে সৃষ্টি।',['ক্ষয়','সঞ্চয়','বহন','অপসারণ'],1,'সূক্ষ্ম ধূলি জমে।'],
+['____ বালিয়াড়িতে দুটি শিং থাকে।',['বার্খান','সিফ','মস্তক','পুচ্ছ'],0,'অর্ধচন্দ্রাকার বার্খান।'],
+['মরুভূমির শুষ্ক নদীখাতকে ____ বলে।',['ওয়াদি','প্লায়া','বাজাদা','পেডিমেন্ট'],0,'আরবি ‘ওয়াদি’ = শুষ্ক উপত্যকা।'],
+['দুটি করির মাঝে গড়ে ওঠে ____।',['এরিটি','টার্ন','ড্রামলিন','এসকার'],0,'ছুরির ফলার মতো শিরা।'],
+['জলপ্রপাতের পাদদেশে সৃষ্ট গর্ত ____।',['প্রপাতকূপ','মন্থকূপ','কেটল','টার্ন'],0,'মন্থকূপ নদীর তলদেশে যেকোনো জায়গায়।'],
+['বহিঃবিধৌত সমভূমিতে বরফ গলে সৃষ্ট হ্রদ ____ হ্রদ।',['কেটল','করি','প্লায়া','অশ্বক্ষুরাকৃতি'],0,'মাঝে উঁচু অংশকে নব বলে।'],
+['আইসল্যান্ডে বহিঃবিধৌত সমভূমিকে ____ বলে।',['স্যান্ডুর','টেরিস','ধ্রিয়ান','শটস'],0,'নদী বিচ্ছিন্ন করলে ভ্যালি ট্রেন।'],
+['কেরলের মালাবার উপকূলের বালিয়াড়িকে ____ বলে।',['টেরিস','ধ্রিয়ান','বার্খান','হামাদা'],0,'চলমান বালিয়াড়ি ধ্রিয়ান — থর মরুতে।']
+];
+const TF=[
+['বহির্জাত প্রক্রিয়ায় ভূমিরূপের ভাস্কর্য তৈরি হয়।',true,''],
+['ক্যানিয়নে নিম্নক্ষয় অপেক্ষা পার্শ্বক্ষয় বেশি হয়।',false,'উল্টো। ক্যানিয়নে পার্শ্বক্ষয় প্রায় হয় না।'],
+['মাজুলি ভারতের বৃহত্তম নদীদ্বীপ।',true,'ব্রহ্মপুত্র নদে।'],
+['উচ্চগতি অপেক্ষা নিম্নগতিতে নদী উপত্যকা চওড়া হয়।',true,''],
+['হিমশৈলের ১/৯ অংশ জলের ওপর জেগে থাকে।',true,''],
+['মালাসপিনা একটি পাদদেশীয় হিমবাহের উদাহরণ।',true,'আলাস্কায়, বৃহত্তম পাদদেশীয় হিমবাহ।'],
+['করি ভূমিরূপ ফ্রান্সে সার্ক নামে পরিচিত।',true,''],
+['উপকূল অঞ্চলে বায়ুর সঞ্চয়কাজ দেখা যায়।',true,'বেলাভূমিতে বালিয়াড়ি।'],
+['বায়ু ও জলধারার মিলিত কাজের ফলে বাজাদা গড়ে ওঠে।',true,''],
+['ড্রামলিনের প্রতিবাত দিক মসৃণ ও মৃদু ঢালু।',false,'ড্রামলিনের প্রতিবাত দিক খাড়া; মসৃণ দিক অনুবাতে।'],
+['সুন্দরবন ১৯৮৭ সালে ইউনেস্কো বিশ্ব ঐতিহ্যক্ষেত্র ঘোষিত হয়।',true,''],
+['নদীর মধ্যগতিতে মন্থকূপ সবচেয়ে বেশি দেখা যায়।',false,'মন্থকূপ উচ্চগতির ক্ষয়জাত ভূমিরূপ।'],
+['ইয়ারদাঙে কঠিন ও কোমল শিলা অনুভূমিকভাবে থাকে।',false,'ইয়ারদাঙে উল্লম্ব, জিউগেনে অনুভূমিক।'],
+['গ্রিনল্যান্ডের জেকবসভান বিশ্বের দ্রুততম হিমবাহ।',true,''],
+['বায়ুর গতিপথের সমান্তরালে বার্খান গড়ে ওঠে।',false,'বার্খান আড়াআড়ি; সমান্তরালে সিফ।']
+];
+const MATCH=[['মন্থকূপ','নদী'],['ইয়ারদাঙ','বায়ু'],['রসে মোতানে','হিমবাহ'],['ক্ষয়কাজ','উচ্চগতি'],['বহনকাজ','মধ্যগতি'],['অবক্ষেপণ কাজ','নিম্নগতি'],['প্যাটাগোনিয়া','দক্ষিণ আমেরিকা'],['গোবি','এশিয়া']];
+
+/* ---------- exam ---------- */
+const FIVE=[
+{q:'নদীর ক্ষয়কার্যের ফলে সৃষ্ট তিনটি ভূমিরূপের চিত্রসহ বর্ণনা দাও।',me:['২৩','১৯','১৫','১২','০৯','০২'],ks:['v','falls','pothole'],alt:'বিকল্প: গিরিখাত, ক্যানিয়ন, প্রপাতকূপ।'},
+{q:'নদীর মধ্যগতিতে সঞ্চয়কার্যের ফলে গঠিত তিনটি ভূমিরূপের চিত্রসহ ব্যাখ্যা করো।',me:['২২','১৪','১০'],ks:['fan','meander','oxbow'],alt:'বিকল্প: প্লাবনভূমি ও স্বাভাবিক বাঁধ।'},
+{q:'নদীর কাজের দ্বারা কীভাবে মন্থকূপ, প্লাবনভূমি ও বদ্বীপ সৃষ্টি হয়, চিত্রসহ ব্যাখ্যা করো।',me:['১৫'],ks:['pothole','flood','delta']},
+{q:'হিমবাহের ক্ষয়কার্যের ফলে সৃষ্ট তিনটি ভূমিরূপের চিত্রসহ বিবরণ দাও।',me:['সাজেশনে বারবার'],ks:['corrie','arete','u'],alt:'বিকল্প: ঝুলন্ত উপত্যকা, রসে মোতানে, ফিয়র্ড।'},
+{q:'হিমবাহ ও জলধারার মিলিত সঞ্চয়কাজে সৃষ্ট ভূমিরূপগুলির চিত্রসহ বর্ণনা দাও।',me:['১৮'],ks:['outwash','drumlin','esker','kettle']},
+{q:'বায়ুর ক্ষয়কার্যের ফলে সৃষ্ট তিনটি ভূমিরূপের চিত্রসহ বিবরণ দাও।',me:['সাজেশনে বারবার'],ks:['gour','zeugen','yardang'],alt:'বিকল্প: অপসারণ গর্ত, ইনসেলবার্জ।'},
+{q:'বায়ুর সঞ্চয়কার্যের ফলে সৃষ্ট তিনটি ভূমিরূপের চিত্রসহ আলোচনা করো।',me:['১৩','০৯','০৮','০৫','০১'],ks:['barchan','seif','loess']},
+{q:'শুষ্ক অঞ্চলে বায়ু ও জলধারার মিলিত কার্যের ফলে সৃষ্ট ভূমিরূপগুলি চিত্রসহ বর্ণনা করো।',me:['২২','১৭'],ks:['wadi','pediment']},
+{q:'মরু প্রসারণের কারণ কী? কীভাবে এর প্রতিরোধ করা যায়?',me:['সাজেশনে বারবার'],text:`<p><b>কারণ (২½):</b></p><ul class="plain"><li><b>প্রাকৃতিক:</b> (ক) জলবায়ু পরিবর্তন: গ্রিনহাউস গ্যাস ও বিশ্ব উষ্ণায়নে বৃষ্টিপাত কমে, উষ্ণতা বাড়ে। (খ) খরা বৃদ্ধি: মাটি শুষ্ক ও আলগা হয়। (গ) ভূমিক্ষয় বৃদ্ধি: হঠাৎ বৃষ্টি ও ধূলিঝড়ে মাটি সরে যায়।</li><li><b>আর্থসামাজিক:</b> (ক) ত্রুটিপূর্ণ কৃষি ও অতিরিক্ত জলসেচে লবণতা বৃদ্ধি। (খ) নিয়ন্ত্রণহীন বৃক্ষচ্ছেদন। (গ) সীমিত চারণভূমিতে যথেচ্ছ পশুচারণ।</li></ul><p><b>প্রতিরোধ (২½):</b></p><ul class="plain"><li>বৃক্ষরোপণ: সবচেয়ে গুরুত্বপূর্ণ; সাহারার দক্ষিণে ৭৭৭৫ কিমি দীর্ঘ গ্রেট গ্রিন ওয়াল।</li><li>বালিয়াড়ির প্রসার রোধ: খরা প্রতিরোধী গাছ, গুল্ম, বেড়া; CAZRI (যোধপুর) গাছের প্রাচীর তৈরি করছে।</li><li>পশুচারণ ভূমির উন্নতি: ভূমির ক্ষমতা অনুযায়ী পশু পালন।</li><li>বৈজ্ঞানিক জলসেচ ও কৃষি: চেক ড্যাম, খরা প্রতিরোধী শস্য (মিলেট)।</li></ul>`},
+{q:'সুন্দরবনের ওপর বিশ্ব জলবায়ু পরিবর্তনের প্রভাব আলোচনা করো।',me:['সাজেশনে বারবার'],text:`<ul class="plain"><li><b>সমুদ্রজলের উষ্ণতা বৃদ্ধি:</b> প্রতি দশকে ০.৫° সে. হারে বাড়ছে; ম্যানগ্রোভ বাস্তুতন্ত্রে বিরূপ প্রভাব।</li><li><b>ঘূর্ণিঝড় ও জলমগ্নতা:</b> বঙ্গোপসাগরে বেশি ঘূর্ণিঝড় (আয়লা, ২০০৯); দ্বীপ মাসের পর মাস জলে ডুবে থাকে।</li><li><b>সমুদ্রতলের উত্থান:</b> লোহাচড়া, নিউমুর, কবস গাড়ি, বেডফোর্ড ডুবে গেছে; ৭৫০০ হেক্টর বনভূমি জলের তলায়।</li><li><b>উপকূলের বিনাশ:</b> খাঁড়িগুলি ক্রমশ চওড়া হচ্ছে।</li><li><b>বনভূমি ও বন্যপ্রাণী হ্রাস:</b> লবণাক্ততা বৃদ্ধিতে সুন্দরী ৪০%, জিয়া ৪৫% কমেছে; রয়েল বেঙ্গল টাইগার, কুমির বিপন্ন।</li><li><b>আর্থসামাজিক:</b> কৃষিজমি ধ্বংস, মাছ-কাঁকড়া চাষ কমছে, বহু মানুষ গৃহহীন ও স্থানান্তরিত।</li></ul>`}
+];
+const DIFFS=[
+{t:'গিরিখাত ও ক্যানিয়ন',h:['গিরিখাত','ক্যানিয়ন'],r:[['ভূমিরূপ','ক্যানিয়নের চেয়ে কম গভীর ও সংকীর্ণ, V আকৃতি','অত্যন্ত গভীর ও সংকীর্ণ, I আকৃতি'],['উৎপত্তি','নিম্নক্ষয়ের সঙ্গে পার্শ্বক্ষয়ের ভূমিকা থাকে','মূলত তীব্র নিম্নক্ষয়ে'],['জলবায়ু','বৃষ্টিযুক্ত আর্দ্র অঞ্চলে','শুষ্ক মরুপ্রায় অঞ্চলে']]},
+{t:'নদী উপত্যকা ও হিমবাহ উপত্যকা',h:['নদী উপত্যকা','হিমবাহ উপত্যকা'],r:[['অবস্থান','তুন্দ্রা ও মরু ছাড়া প্রায় সর্বত্র','উচ্চ পর্বত ও মেরু অঞ্চলে সীমাবদ্ধ'],['আকৃতি','পার্বত্য অংশে I ও V, নিম্নপ্রবাহে গামলার মতো','সর্বদা U আকৃতি'],['প্রকৃতি','দীর্ঘ, আঁকাবাঁকা, অমসৃণ','স্বল্প দৈর্ঘ্য, সরলরৈখিক, মসৃণ']]},
+{t:'আরোহণ ও অবরোহণ',h:['আরোহণ','অবরোহণ'],r:[['উচ্চতা','সঞ্চয়ে ভূভাগের উচ্চতা বাড়ে','ক্ষয়ে উচ্চতা কমে'],['কাজ','ক্ষয়জাত পদার্থ অন্যত্র সঞ্চিত হয়','ভূত্বকের শিলা ক্ষয় পেয়ে নিচের শিলা বেরোয়'],['নিয়ন্ত্রক','ক্ষয়ীভবনের শক্তি: নদী, বায়ু, হিমবাহ, তরঙ্গ','আবহবিকার, পুঞ্জিত ক্ষয়, ক্ষয়ীভবন']]},
+{t:'পলল ব্যজনী ও বদ্বীপ',h:['পলল ব্যজনী','বদ্বীপ'],r:[['অবস্থান','পর্বতের পাদদেশে, মধ্যগতির শুরুতে','নিম্নগতির শেষে মোহানায়'],['আকৃতি','ত্রিকোণাকার বা হাতপাখার মতো','মাত্রাহীন ‘ব’ বা Δ-এর মতো'],['উপাদান','বড় নুড়ি, কাঁকর, বালি; ভূমি ঢালু ও অনুর্বর','সূক্ষ্ম বালি, পলি, কাদা; সমতল ও উর্বর']]},
+{t:'রসে মোতানে ও ড্রামলিন',h:['রসে মোতানে','ড্রামলিন'],r:[['আকৃতি','কঠিন শিলায় গঠিত উঁচু ঢিবি','উল্টানো নৌকার মতো টিলা'],['কাজ','হিমবাহের ক্ষয়কাজে গড়ে','হিমবাহ ও জলধারার সঞ্চয়ে গড়ে'],['বৈশিষ্ট্য','প্রতিবাত মসৃণ ও মৃদু, অনুবাত অমসৃণ ও খাড়া','প্রতিবাত অমসৃণ ও খাড়া, অনুবাত মৃদু']]},
+{t:'বার্খান ও সিফ',h:['বার্খান','সিফ'],r:[['বায়ুপ্রবাহ','বায়ুর গতিপথে আড়াআড়ি','বায়ুর গতিপথের সমান্তরালে'],['আকৃতি','আধখানা চাঁদ, কিনারায় শিং','দীর্ঘ ও সংকীর্ণ তরবারির মতো'],['আকার','দৈর্ঘ্য ও প্রস্থ প্রায় সমান; অনুচ্চ; চলনশীল','প্রস্থের প্রায় ছয়গুণ উঁচু; সুবিস্তৃত; স্থায়ী'],['ঢাল','প্রতিবাত মৃদু উত্তল, অনুবাত খাড়া অবতল','প্রতিবাত মৃদু ও চওড়া, অনুবাত খাড়া ও সংকীর্ণ']]},
+{t:'ইয়ারদাঙ ও জিউগেন',h:['ইয়ারদাঙ','জিউগেন'],r:[['শিলা','কঠিন ও কোমল স্তর উল্লম্বভাবে','কঠিন ও কোমল স্তর অনুভূমিকভাবে'],['আকৃতি','মোরগের ঝুঁটি, মাথা ছুঁচালো','টেবিলের মতো, মাথা চ্যাপ্টা'],['ঢাল','দুপাশ অসমান, অপ্রতিসম','দুপাশ সমান, প্রতিসম'],['উচ্চতা','কম, গড়ে ৭ মি','বেশি, ৩–৩০ মি']]},
+{t:'পেডিমেন্ট ও বাজাদা',h:['পেডিমেন্ট','বাজাদা'],r:[['প্রকৃতি','মূলত ক্ষয়জাত সমভূমি','সঞ্চয়জাত সমভূমি'],['অবস্থান','ইনসেলবার্জ বা মরু পর্বতের পাদদেশের ঢালের উঁচু অংশে','পাদদেশের ঢালের নিচু অংশে, পেডিমেন্টের নিচে'],['ঢাল','বেশি, ১°–৭°','কম, ৩°–৪°'],['উচ্চতা','প্লায়া হ্রদের চেয়ে অনেক বেশি','প্লায়া হ্রদের জলতলের প্রায় সমান']]},
+{t:'হিমরেখা ও গ্রাবরেখা',h:['হিমরেখা','গ্রাবরেখা'],r:[['প্রকৃতি','হিমবাহের নিম্নপ্রান্তের সীমারেখা','হিমবাহের সঞ্চয়জাত প্রাচীরের মতো ভূমিরূপ'],['অবস্থান','উপত্যকার নিম্নসীমায় বা সমুদ্রপৃষ্ঠে','উপত্যকার দুপাশে, মাঝে, প্রান্তে'],['জলধারা','নিচে হিমবাহ গলে জলধারা সৃষ্টি হয়','কোনো জলধারা সৃষ্টি হয় না']]}
+];
+const TWOS=[
+['পর্যায়ন কী?','অবরোহণ ও আরোহণ প্রক্রিয়ার মাধ্যমে ভূত্বকের উপরিভাগের উঁচুনিচু অংশের সমতা এনে একটি সাধারণ তল গঠিত হওয়াকে পর্যায়ন (Gradational Process) বলে। চেম্বারলিন ও সলিসবেরি (১৯০৪) এই নাম দেন।'],
+['পুঞ্জিত ক্ষয় কাকে বলে?','আবহবিকারজাত পদার্থ অভিকর্ষের টানে পর্বতের ঢাল বরাবর নিচের দিকে নেমে আসার প্রক্রিয়াকে পুঞ্জিত ক্ষয় (Mass Wasting) বলে। যেমন ধস।'],
+['নগ্নীভবন কী?','আবহবিকার, পুঞ্জিত ক্ষয় ও ক্ষয়ীভবনের যৌথ ক্রিয়ায় ভূপৃষ্ঠের ওপরের শিলাস্তর সরে গিয়ে নিচের শিলা উন্মুক্ত হওয়া ও উচ্চতা কমাকে নগ্নীভবন বলে।'],
+['ধারণ অববাহিকা ও জলবিভাজিকা কী?','উচ্চভূমিতে উৎস অঞ্চলে অসংখ্য উপনদীসহ প্রধান নদীর জল সংগ্রহের ক্ষেত্রকে ধারণ অববাহিকা বলে। যে উচ্চভূমি দুটি নদী অববাহিকাকে আলাদা করে তাকে জলবিভাজিকা বলে, যেমন বিন্ধ্য পর্বত।'],
+['কিউসেক ও কিউমেক কী?','নদীর একটি নির্দিষ্ট অংশ দিয়ে প্রতি সেকেন্ডে যত ঘনফুট জল প্রবাহিত হয় তা কিউসেক, আর যত ঘনমিটার জল প্রবাহিত হয় তা কিউমেক।'],
+['ষষ্ঠঘাতের সূত্র কী?','নদীর গতিবেগ দ্বিগুণ হলে বহনক্ষমতা ২⁶ = ৬৪ গুণ বাড়ে। গতিবেগ ও বহনক্ষমতার এই সম্পর্ককে ষষ্ঠঘাতের সূত্র বলে। ১৮৪২ সালে হপকিনস এটি দেন।'],
+['প্রপাতকূপ ও মন্থকূপের পার্থক্য কী?','প্রপাতকূপ জলপ্রপাতের পাদদেশে বড় হাঁড়ির মতো গর্ত, জলের আঘাত ও ঘূর্ণিতে তৈরি। মন্থকূপ নদীর তলদেশে যেকোনো জায়গায় ছোট গোল গর্ত, নুড়ির অবঘর্ষে তৈরি।'],
+['নবীন ভঙ্গিল পর্বতে অসংখ্য গিরিখাত দেখা যায় কেন?','(১) এই পর্বত নরম পাললিক শিলায় গঠিত, তাই সহজে নিম্নক্ষয় হয়। (২) ঢাল খুব খাড়া, তাই নদী তীব্র নিম্নক্ষয় করে। (৩) পর্বত উত্থানের আগের পূর্ববর্তী নদীগুলি নিম্নক্ষয় চালিয়ে গিরিখাত বজায় রেখেছে।'],
+['সব নদীর মোহানায় বদ্বীপ গড়ে ওঠে না কেন?','বদ্বীপের জন্য পলির আধিক্য, দীর্ঘ মধ্য-নিম্নপ্রবাহ, অগভীর ও শান্ত সমুদ্র, বেশি লবণতা দরকার। মোহানায় জোয়ার বা সমুদ্রস্রোত প্রবল হলে বা সমুদ্র গভীর হলে পলি জমতে পারে না, তাই খাঁড়ি তৈরি হয়।'],
+['অশ্বক্ষুরাকৃতি হ্রদ কীভাবে তৈরি হয়?','নদীবাঁকের অবতল পাড় ক্রমাগত ক্ষয় হয়, উত্তল পাড়ে পলি জমে। দুটি বাঁকের মাঝের বাঁকগ্রীবা সরু হতে হতে একসময় কেটে যায়, নদী সোজা পথে বয়। পুরোনো বাঁকের মুখ পলিতে বন্ধ হয়ে ঘোড়ার খুরের মতো হ্রদ হয়। যেমন মতিঝিল।'],
+['হিমরেখা কাকে বলে?','উঁচু পার্বত্য বা মেরু অঞ্চলে যে সীমারেখার ওপর সারা বছর তুষার জমে থাকে এবং যার নিচে তুষার গলে যায়, তাকে হিমরেখা বলে। নিরক্ষরেখা থেকে মেরুর দিকে এর উচ্চতা কমে।'],
+['বার্গস্রুন্ড ও ক্রেভাস কী?','হিমবাহের ওপরে আড়াআড়ি বা সমান্তরাল ফাটলকে ক্রেভাস বলে। পর্বতগাত্রে আটকে থাকা বরফ ও নেমে যাওয়া হিমবাহের মাঝের গভীর ফাটলকে বার্গস্রুন্ড বলে। দুটিই পর্বতারোহীদের পক্ষে বিপজ্জনক।'],
+['মরু অঞ্চলে বায়ুর কাজ প্রাধান্য পায় কেন?','(১) গাছপালা-পাহাড়ের বাধা নেই। (২) শুষ্কতায় ভূমি আলগা। (৩) দিন-রাতের উষ্ণতার পার্থক্যে যান্ত্রিক আবহবিকারে প্রচুর বালি তৈরি হয়। (৪) তীব্র বায়ুপ্রবাহ।'],
+['ভ্যানিশিং আইল্যান্ড কী?','ভূমিক্ষয় ও সমুদ্রতলের উচ্চতা বৃদ্ধিতে সুন্দরবনের যে দ্বীপগুলি ডুবে গেছে বা নিশ্চিহ্ন হওয়ার মুখে, তাদের ভ্যানিশিং আইল্যান্ড বলে। যেমন লোহাচড়া, নিউমুর, বেডফোর্ড।'],
+['বিন্দুবার কী?','নদীবাঁকের উত্তল (ঢালু) পাড়ে স্রোতের অভাবে যে পলি সঞ্চয় হয় তাকে বিন্দুবার বলে।']
+];
+
+
+const DAYS=[
+['দিন ১','বহির্জাত প্রক্রিয়ার সংজ্ঞা, পদ্ধতি, পর্যায়ন, নগ্নীভবন। নদীর পরিভাষা ও তিন গতি।'],
+['দিন ২','নদীর ক্ষয় ও বহন পদ্ধতি, ক্ষয়জাত ৮টি ভূমিরূপ। কার্ডে ছবি আঁকা অনুশীলন।'],
+['দিন ৩','নদীর সঞ্চয়জাত ভূমিরূপ ও বদ্বীপ। দিন ১-এর অংশ রিভিশন।'],
+['দিন ৪','হিমবাহ: প্রকার, পরিভাষা, ক্ষয়জাত ও সঞ্চয়জাত ভূমিরূপ, যৌথ ভূমিরূপ।'],
+['দিন ৫','বায়ু: মরুভূমি, পদ্ধতি, ক্ষয়জাত, সঞ্চয়জাত, বায়ু-জলধারার যৌথ ভূমিরূপ।'],
+['দিন ৬','সুন্দরবন, ভ্যানিশিং আইল্যান্ড, মরু প্রসারণ। সব পার্থক্যের ছক।'],
+['দিন ৭','পুরো কুইজ, মিলাও খেলা, দুটি ৫ নম্বরের প্রশ্ন চিত্রসহ লেখা।']
+];
+
+/* ================= পড়ার ক্লাস: one page for every chapter =================
+   ?ch=geo1  → Chapter 1 (the data above)
+   ?ch=<id>  → a chapter made in the teacher's control panel (read from the app's saved copy on this phone,
+               or downloaded from the server when it is not saved yet)
+   Inside the app every "🤖" button sends the question to the chatbot (the app opens the chat). */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bn=n=>String(n).replace(/\d/g,d=>'০১২৩৪৫৬৭৮৯'[d]);
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const QS=new URLSearchParams(location.search);
+const CHID=QS.get('ch')||'geo1';
+const EMBED=window.parent!==window;
+if(EMBED)document.documentElement.classList.add('embed');
+const store={get(k,d){try{const v=localStorage.getItem('bhumi_'+(CHID==='geo1'?'':CHID+'_')+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('bhumi_'+(CHID==='geo1'?'':CHID+'_')+k,JSON.stringify(v))}catch(e){}}};
+const appGet=k=>{try{const v=localStorage.getItem('sb_'+k);return v==null?null:JSON.parse(v)}catch(e){return null}};
+const picUrl=(id,w)=>'https://drive.google.com/thumbnail?id='+encodeURIComponent(id)+'&sz=w'+(w||1000);
+const API_URL='https://script.google.com/macros/s/AKfycbzTRsK521Be_87BLMJp4Gt_tQuoxgu_xu_bLJKr3gej8saDsEXTb4fUq7M1n4jENfWF/exec';
+
+/* ---------- the chatbot ---------- */
+function askBot(text,marks){
+  if(EMBED){parent.postMessage({type:'shikkhok-ask',text,marks:marks||0},'*');return}
+  try{localStorage.setItem('sb_pendingAsk',JSON.stringify({text,marks:marks||0,ch:CHID}))}catch(e){}
+  location.href='index.html';
+}
+const botBtn=(label,text,marks)=>`<button class="askbot" data-ask="${esc(text)}" data-marks="${marks||0}">🤖 ${label}</button>`;
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ask]');if(b){e.preventDefault();askBot(b.dataset.ask,+b.dataset.marks)}});
+$('#fab').onclick=()=>{if(EMBED)parent.postMessage({type:'shikkhok-bot'},'*');else location.href='index.html'};
+const examAsk=(q,m)=>`[প্রশ্নব্যাংক] এই ${bn(m)} নম্বরের প্রশ্নটা আমাকে করো: "${q}"। আমি নিজে উত্তর লিখব। তারপর মাধ্যমিকের মতো ${bn(m)} নম্বরে মূল্যায়ন করবে, কী বাদ গেল বলবে আর মনে রাখার কৌশল দেবে।`;
+
+/* ---------- colours for branches/topics ---------- */
+const PAL=['var(--river)','var(--ice)','var(--wind)','var(--misc)','var(--ok)','var(--bad)','var(--accent)','#8A5A2B'];
+const GEO_AGC={নদী:'var(--river)',হিমবাহ:'var(--ice)',বায়ু:'var(--wind)',যৌথ:'var(--misc)',মূল:'var(--accent)'};
+let D=null;
+const col=ag=>D.agc[ag]||(D.agc[ag]=PAL[Object.keys(D.agc).length%PAL.length]);
+
+/* ---------- Chapter 1 ---------- */
+function geoData(){
+  return {geo:1,subject:'ভূগোল',title:'বহির্জাত প্রক্রিয়া ও সৃষ্ট ভূমিরূপ',eyebrow:'মাধ্যমিক ভূগোল · প্রথম অধ্যায়',center:['বহির্জাত','প্রক্রিয়া'],
+    agc:Object.assign({},GEO_AGC),trickAgs:['নদী','হিমবাহ','বায়ু','যৌথ','মূল'],cardAgs:['নদী','হিমবাহ','বায়ু','যৌথ'],agLabel:{যৌথ:'যৌথ ও পরিবেশ',মূল:'মূল ধারণা'},
+    cards:CARDS.map(c=>({id:c.id||c.k,k:c.k,n:c.n,en:c.en,ag:c.ag,tag:(c.ag==='যৌথ'?'যৌথ কাজ':c.ag)+' · '+(c.w==='যৌথ'?'ক্ষয় ও সঞ্চয়':c.w+'জাত'),def:c.def,org:c.org,ex:c.ex,tip:c.tip})),
+    map:MAP,tricks:TRICKS,nums:NUMS,
+    mcq:MCQ.map(x=>({q:x[0],o:x[1],a:x[2],e:x[3]})),fill:FILL.map(x=>({q:x[0],o:x[1],a:x[2],e:x[3]})),tf:TF.map(x=>({q:x[0],a:x[1],e:x[2]})),match:MATCH,
+    five:FIVE.map(f=>({q:f.q,me:f.me,cards:f.ks,text:f.text,alt:f.alt})),diffs:DIFFS,twos:TWOS,days:DAYS,
+    videos:[],images:[],orgLabel:'উৎপত্তি',reveal:'এটা কোন ভূমিরূপ? মনে মনে বলো, তারপর চাপো'};
+}
+
+/* ---------- a chapter from the control panel ---------- */
+function splitCenter(t){const w=String(t).split(/\s+/);if(w.length<2)return [t,''];let a='',i=0;while(i<w.length&&(a+' '+w[i]).trim().length<=11){a=(a+' '+w[i]).trim();i++}if(!a){a=w[0];i=1}let b=w.slice(i).join(' ');if(b.length>12)b=b.slice(0,11)+'…';return [a,b]}
+function shortName(t){t=String(t).split(/[,:;(]| ও /)[0].trim();return t.length>9?t.slice(0,8)+'…':t}
+function fromChapter(c){
+  const b=c.bank||{},topics=(c.topics||[]).map(t=>t.name);
+  const tname=s=>{s=String(s||'').trim();if(!s)return topics[0]||'মূল';const hit=topics.find(t=>t===s||t.indexOf(s)>=0||s.indexOf(t)>=0);return hit||s};
+  const cards=(b.lf||[]).map((x,i)=>({id:'c'+i,k:x.f||'',img:x.img||'',n:x.n,en:x.en||'',ag:tname(x.s),tag:tname(x.s)+(x.k?' · '+x.k:''),def:x.d,org:x.o,ex:x.e,tip:x.h}));
+  let map=Array.isArray(c.map)&&c.map.length?c.map.map((m,i)=>({id:'b'+i,name:m.name||shortName(m.full||''),full:m.full||m.name,ag:m.full||m.name,yt:m.yt||((m.full||m.name)+' মাধ্যমিক '+(c.subject||'')),kids:m.kids||[]})):null;
+  if(!map)map=(topics.length?topics:['মূল ধারণা']).map((t,i)=>({id:'b'+i,name:shortName(t),full:t,ag:t,yt:t+' মাধ্যমিক '+(c.subject||''),
+    kids:cards.filter(x=>x.ag===t).map(x=>({n:x.n,d:x.def,kids:[x.org,x.ex&&('উদাহরণ: '+x.ex)].filter(Boolean)}))}));
+  // map branches use their topic's colour
+  const agc={};map.forEach((m,i)=>{agc[m.ag]=PAL[i%PAL.length]});topics.forEach((t,i)=>{if(!agc[t])agc[t]=PAL[i%PAL.length]});
+  const tricks=(b.mn||[]).map(x=>{const parts=String(x.m||'').split(/[;,،]\s*/).map(p=>p.split(/\s*(?:=|→|->|:|—)\s*/)).filter(p=>p.length>=2&&p[0]&&p[1]);
+    return {ag:'',t:x.t,mn:x.p,d:parts.length?parts.map(p=>[p[0],p.slice(1).join(' ')]):(x.m?[['মানে',x.m]]:[])}});
+  const fillAns=(b.fill||[]).map(x=>x.a);
+  const fill=(b.fill||[]).map(x=>{const others=shuffle(fillAns.filter(a=>a!==x.a)).slice(0,3);const o=shuffle([x.a,...others]);return {q:x.q,o,a:o.indexOf(x.a),e:x.w}}).filter(x=>x.o.length>=2);
+  const mcq=(b.mcq||[]).map(x=>({q:x.q,o:x.o,a:Math.max(0,x.o.indexOf(x.a)),e:x.w}));
+  const tf=(b.tf||[]).map(x=>({q:x.q,a:x.a!=='মিথ্যা',e:x.w}));
+  const match=String(b.match||'').split(';').map(p=>p.split(/\s+[—–-]\s+/).map(s=>s.trim())).filter(p=>p.length===2&&p[0]&&p[1]);
+  const five=(b.l5||[]).map(q=>({q:q.q,me:q.y?[q.y]:[],cards:(q.lf||[]).map(n=>(cards.find(x=>x.n===n)||{}).id).filter(Boolean),
+    text:(q.t||[]).length?q.t.map(l=>/^[-•]/.test(l)?`<p class="ansline">• ${esc(l.replace(/^[-•]\s*/,''))}</p>`:`<h4 style="margin:10px 0 2px">${esc(l)}</h4>`).join(''):'',alt:q.alt?'বিকল্প: '+q.alt:''}));
+  const diffs=(b.d3||[]).map(d=>({t:d.A+' ও '+d.B,h:[d.A,d.B],r:d.r}));
+  const twos=(b.s2||[]).map(x=>[x.q,x.a]);
+  const days=(c.lessons||[]).map((l,i)=>['পাঠ '+bn(i+1),l.t+(l.items?': '+l.items.replace(/;\s*/g,', '):'')]);
+  const m=c.media||{};
+  const cardAgs=[...new Set(cards.map(x=>x.ag))];
+  return {geo:0,subject:c.subject,title:c.title,eyebrow:'মাধ্যমিক '+(c.subject||'')+' · অধ্যায় '+bn(c.order||''),center:splitCenter(c.title),
+    agc,trickAgs:[],cardAgs:cardAgs.length<=8?cardAgs:[],agLabel:{},cards,map,tricks,nums:(b.rc||[]).filter(x=>x.v).map(x=>[x.k,x.v]),mcq,fill,tf,match,five,diffs,twos,days,
+    videos:(m.videos||[]).map(v=>({title:v.title,url:v.url,drive:v.drive})),images:m.images||[],orgLabel:'ব্যাখ্যা',reveal:'এটা কী? মনে মনে বলো, তারপর চাপো'};
+}
+async function loadData(){
+  if(CHID==='geo1'){const d=geoData();const c=appGet('chapdata_geo1');if(c&&c.media){(c.media.videos||[]).forEach(v=>d.videos.push(v));d.images=c.media.images||[]}return d}
+  let c=appGet('chapdata_'+CHID);
+  if(!c){const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({action:'chapter',id:CHID})});const j=await r.json();if(!j.chapter)throw new Error(j.error||'not found');c=j.chapter}
+  return fromChapter(c);
+}
+
+/* ---------- figures & pictures ---------- */
+function fig(k,label){return F[k]?`<svg class="fig" viewBox="0 0 200 120" role="img" aria-label="${esc(label||'')}">${F[k]}</svg>`:''}
+const capOf=id=>(D.images.find(x=>x.id===id)||{}).caption||'';
+function cardPic(c){if(c.k&&F[c.k])return fig(c.k,c.n);if(c.img)return `<img class="pic" loading="lazy" src="${picUrl(c.img)}" alt="${esc(c.n)}">`;return ''}
+const cardBy=id=>D.cards.find(c=>c.id===id||c.k===id);
+
+/* ---------- tabs ---------- */
+const VIEWS=['start','map','tricks','cards','quiz','exam','media'];
+function show(v){
+  if(!VIEWS.includes(v))v='start';
+  VIEWS.forEach(x=>{$('#v-'+x).hidden=x!==v});
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===v));
+  const act=document.querySelector('.tab[data-v="'+v+'"]');if(act)act.scrollIntoView({inline:'nearest',block:'nearest'});
+}
+$('#tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(!t)return;history.replaceState(null,'','#'+t.dataset.v);show(t.dataset.v);window.scrollTo({top:0})});
+window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
+
+/* ---------- start / plan ---------- */
+function renderHeader(){
+  $('#eyebrow').textContent=D.eyebrow;$('#htitle').textContent=D.title;document.title='পড়ার ক্লাস · '+D.title;
+  if(!D.geo){
+    $('#journey').style.display='none';
+    $('#hlead').textContent='মাইন্ড ম্যাপ, কার্ড, মনে রাখার কৌশল, কুইজ আর পরীক্ষার প্রস্তুতি: পুরো অধ্যায় এক জায়গায়। আটকালে বটকে জিজ্ঞেস করো।';
+    $('#startLead').textContent='প্রথমে মাইন্ড ম্যাপে পুরো অধ্যায়টা এক নজরে দেখো। তারপর রোজ একটা পাঠ, কার্ড দিয়ে মুখে বলা, আর কুইজে যাচাই। পাঠগুলো “শেখো”-তে বটের সঙ্গে করা যায়।';
+    $('#mapLead').textContent='মাঝখানে অধ্যায়, চারপাশে তার শাখাগুলো। একটা শাখায় চাপ দাও, নিচে তার পুরো গাছ খুলবে।';
+    $('#cardsLead').textContent='প্রতিটা মূল ধারণার একটা কার্ড। পাশে সরাও বা তীর চাপো।';
+    $('#formulaPanel').innerHTML='<h3>৫ নম্বরের উত্তর লেখার সূত্র</h3><div class="formula"><span>মূল কথা / সংজ্ঞা</span><span>ব্যাখ্যা বা কারণ</span><span>বৈশিষ্ট্য / ধাপ</span><span>উদাহরণ</span><span>চিত্র (যেখানে লাগে)</span></div><p class="note" style="margin:8px 0 0">প্রশ্নে যতগুলো অংশ চাওয়া, প্রতিটার জন্য আলাদা অনুচ্ছেদ লেখো, মাথায় ছোট শিরোনাম দাও।</p>';
+    $('#meNote').textContent='মডেল উত্তর দেখে নাও, তারপর “উত্তর লিখে বটকে দেখাও” চাপো: বট মাধ্যমিকের মতো নম্বর দেবে।';
+  }
+  $('#planTitle').textContent=D.geo?'৭ দিনের রুটিন':bn(D.days.length)+' দিনের রুটিন';
+}
+function renderPlan(){
+  const done=store.get('days',[]);
+  $('#days').innerHTML=D.days.map((d,i)=>`<label class="day ${done.includes(i)?'done':''}"><input type="checkbox" id="day${i}" data-i="${i}" ${done.includes(i)?'checked':''}><div><b>${esc(d[0])}</b><span>${esc(d[1])}</span></div></label>`).join('');
+  $('#pbar').style.width=(D.days.length?done.length/D.days.length*100:0)+'%';
+}
+$('#days').addEventListener('change',e=>{const i=+e.target.dataset.i;let d=store.get('days',[]);d=e.target.checked?[...new Set([...d,i])]:d.filter(x=>x!==i);store.set('days',d);renderPlan()});
+
+/* ---------- mind map ---------- */
+let curBranch=null;
+function renderRadial(){
+  const cx=200,cy=160,R=118,M=D.map;
+  let s='';
+  M.forEach((b,i)=>{const a=-Math.PI/2+i*2*Math.PI/M.length;b.x=cx+R*Math.cos(a);b.y=cy+R*Math.sin(a);s+=`<line class="link" x1="${cx}" y1="${cy}" x2="${b.x}" y2="${b.y}"/>`});
+  s+=`<circle cx="${cx}" cy="${cy}" r="56" fill="var(--ink)"/><text x="${cx}" y="${cy-6}" text-anchor="middle" style="fill:var(--bg);font-size:15px">${esc(D.center[0])}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" style="fill:var(--bg);font-size:15px">${esc(D.center[1])}</text>`;
+  M.forEach(b=>{s+=`<g class="node ${b.id===curBranch?'on':''}" tabindex="0" role="button" aria-label="${esc(b.full)}" data-id="${b.id}"><circle cx="${b.x}" cy="${b.y}" r="38" fill="${col(b.ag)}" stroke="var(--bg)" stroke-width="2"/><text x="${b.x}" y="${b.y+5}" text-anchor="middle">${esc(b.name)}</text></g>`});
+  $('#radial').innerHTML=s;
+}
+function nodeHTML(n,depth){
+  if(typeof n==='string')return `<li class="leaf">${esc(n)}</li>`;
+  const d=n.d?`<span class="d">${esc(n.d)}</span>`:'';
+  if(!n.kids||!n.kids.length)return `<li><b>${esc(n.n)}</b>${d}</li>`;
+  return `<li><details ${depth<1?'open':''}><summary>${esc(n.n)}</summary>${d}<ul>${n.kids.map(k=>nodeHTML(k,depth+1)).join('')}</ul></details></li>`;
+}
+function renderTree(){
+  const b=D.map.find(x=>x.id===curBranch)||D.map[0];if(!b){$('#tree').innerHTML='';return}
+  const t=$('#tree');t.style.setProperty('--c',col(b.ag));
+  t.innerHTML=`<h3>${esc(b.full)} <a class="vid" href="https://www.youtube.com/results?search_query=${encodeURIComponent(b.yt)}" target="_blank" rel="noopener">▶ ভিডিও খোঁজো</a></h3><ul>${b.kids.map(k=>nodeHTML(k,0)).join('')}</ul>`+
+    `<p class="note" style="margin:10px 0 0">সব শাখা খুলতে: <button class="chip" id="openAll">সব খোলো</button></p>`+
+    botBtn('এই শাখাটা বটের কাছে ধাপে ধাপে শেখো',`[পড়ার ক্লাস] মাইন্ড ম্যাপের "${b.full}" শাখাটা আমাকে ধাপে ধাপে বুঝিয়ে দাও। প্রতিটা ছোট অংশের পর একটা প্রশ্ন করো, আর আমার জগতের সঙ্গে জুড়ে মনে রাখার কৌশল দাও।`);
+}
+function pick(id){curBranch=id;renderRadial();renderTree()}
+$('#radial').addEventListener('click',e=>{const g=e.target.closest('.node');if(g)pick(g.dataset.id)});
+$('#radial').addEventListener('keydown',e=>{const g=e.target.closest('.node');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(g.dataset.id)}});
+$('#tree').addEventListener('click',e=>{if(e.target.id==='openAll')$('#tree').querySelectorAll('details').forEach(d=>d.open=true)});
+
+/* ---------- tricks ---------- */
+let trickAg='সব';
+function renderTricks(){
+  const ags=D.trickAgs.length?['সব',...D.trickAgs]:[];
+  $('#trickFilter').innerHTML=ags.map(a=>`<button class="chip" aria-pressed="${a===trickAg}" data-a="${esc(a)}">${esc(D.agLabel[a]||a)}</button>`).join('');
+  const list=D.tricks.filter(t=>trickAg==='সব'||t.ag===trickAg);
+  $('#tricks').innerHTML=list.map(t=>`<div class="trick" style="--c:${t.ag?col(t.ag):'var(--accent)'}"><h3>${esc(t.t)}</h3><div class="mn">${esc(t.mn)}</div><ul class="decode">${t.d.map(x=>`<li><b>${esc(x[0])}</b> → ${esc(x[1])}</li>`).join('')}</ul>`+
+    botBtn('এটা দিয়ে আমাকে মুখস্থ করাও',`[পড়ার ক্লাস] "${t.t}" মনে রাখার বাক্য "${t.mn}" দিয়ে আমাকে মুখস্থ করাও: আগে মানে বুঝিয়ে দাও, তারপর আমাকে বলতে বলো আর যাচাই করো।`)+`</div>`).join('')||'<p class="note">এই অধ্যায়ে এখনো মনে রাখার বাক্য নেই।</p>';
+  $('#nums').innerHTML=D.nums.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('');
+  $('#nums').closest('.panel').hidden=!D.nums.length;
+}
+$('#trickFilter').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b){trickAg=b.dataset.a;renderTricks()}});
+
+/* ---------- cards ---------- */
+let cardAg='সব',selfTest=store.get('self',false);
+function renderCards(){
+  const ags=D.cardAgs.length>1?['সব',...D.cardAgs]:[];
+  $('#cardFilter').innerHTML=ags.map(a=>`<button class="chip" aria-pressed="${a===cardAg}" data-a="${esc(a)}">${esc(a==='যৌথ'?'যৌথ কাজ':a)}</button>`).join('');
+  const list=D.cards.filter(c=>cardAg==='সব'||c.ag===cardAg);
+  $('#selftest').checked=selfTest;
+  $('#carousel').innerHTML=list.map((c,i)=>`<article class="fc ${selfTest?'hide':''}" style="--c:${col(c.ag)}" data-i="${i}">
+    ${cardPic(c)}
+    <button class="reveal">${esc(D.reveal)}</button>
+    <div class="body" style="display:${selfTest?'':'flex'};flex-direction:column;gap:8px">
+      <div><span class="tag">${esc(c.tag)}</span></div>
+      <h3>${esc(c.n)} <span class="en">${esc(c.en)}</span></h3>
+      <dl><div><dt>সংজ্ঞা</dt><dd>${esc(c.def)}</dd></div><div><dt>${D.orgLabel}</dt><dd>${esc(c.org)}</dd></div>${c.ex?`<div><dt>উদাহরণ</dt><dd>${esc(c.ex)}</dd></div>`:''}</dl>
+      ${c.tip?`<div class="tip">💡 ${esc(c.tip)}</div>`:''}
+      ${botBtn('বটকে জিজ্ঞেস করো',`[পড়ার ক্লাস] "${c.n}" আমাকে সহজ করে বুঝিয়ে দাও, আমার জগতের সঙ্গে জুড়ে মনে রাখার কৌশল দাও, তারপর একটা প্রশ্ন করে যাচাই করো।`)}
+    </div></article>`).join('')||'<p class="note">এই অধ্যায়ে এখনো কার্ড নেই।</p>';
+  $('#carousel').scrollLeft=0;updCount();
+}
+function cardW(){const c=$('#carousel').querySelector('.fc');return c?c.getBoundingClientRect().width+12:300}
+function updCount(){const n=$('#carousel').querySelectorAll('.fc').length;const i=Math.min(n,Math.round($('#carousel').scrollLeft/cardW())+1);$('#count').textContent=bn(i)+' / '+bn(n)}
+$('#carousel').addEventListener('scroll',()=>requestAnimationFrame(updCount));
+$('#carousel').addEventListener('click',e=>{const r=e.target.closest('.reveal');if(r){const c=r.closest('.fc');c.classList.remove('hide');c.querySelector('.body').style.display='flex'}});
+$('#prev').onclick=()=>$('#carousel').scrollBy({left:-cardW(),behavior:'smooth'});
+$('#next').onclick=()=>$('#carousel').scrollBy({left:cardW(),behavior:'smooth'});
+$('#carousel').addEventListener('keydown',e=>{if(e.key==='ArrowRight')$('#next').click();if(e.key==='ArrowLeft')$('#prev').click()});
+$('#cardFilter').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b){cardAg=b.dataset.a;renderCards()}});
+$('#selftest').addEventListener('change',e=>{selfTest=e.target.checked;store.set('self',selfTest);renderCards()});
+
+/* ---------- quiz ---------- */
+let MODES=[];
+let Q={mode:'mix',list:[],i:0,score:0,wrong:[]};
+function toItems(mode){
+  const m=D.mcq.map(x=>({...x})),f=D.fill.map(x=>({...x})),t=D.tf.map(x=>({q:x.q,o:['সত্য','মিথ্যা'],a:x.a?0:1,e:x.e,tf:1}));
+  if(mode==='mcq')return shuffle(m);
+  if(mode==='fill')return shuffle(f);
+  if(mode==='tf')return shuffle(t);
+  return shuffle([...shuffle(m).slice(0,8),...shuffle(f).slice(0,4),...shuffle(t).slice(0,3)]);
+}
+function startQuiz(mode,list){
+  MODES=[['mix','মিশ্র ১৫টি'],D.mcq.length&&['mcq','বহু বিকল্প'],D.fill.length&&['fill','শূন্যস্থান'],D.tf.length&&['tf','সত্য/মিথ্যা'],D.match.length&&['match','মিলাও']].filter(Boolean);
+  Q={mode,list:list||toItems(mode),i:0,score:0,wrong:[]};
+  $('#modes').innerHTML=MODES.map(m=>`<button class="chip" aria-pressed="${m[0]===mode}" data-m="${m[0]}">${m[1]}</button>`).join('');
+  if(mode==='match')return renderMatch();
+  if(!Q.list.length){$('#qbox').innerHTML='<p class="note">এই অধ্যায়ে এখনো প্রশ্ন নেই।</p>';return}
+  Q.list=Q.list.map(it=>{if(it.tf)return it;const idx=shuffle(it.o.map((_,k)=>k));return {...it,o:idx.map(k=>it.o[k]),a:idx.indexOf(it.a)}});
+  renderQ();
+}
+function renderQ(){
+  const it=Q.list[Q.i];
+  if(!it)return renderEnd();
+  const K=['ক','খ','গ','ঘ'];
+  $('#qbox').innerHTML=`<div class="qmeta"><span>প্রশ্ন ${bn(Q.i+1)} / ${bn(Q.list.length)}</span><span>সঠিক: ${bn(Q.score)}</span></div>
+  <div class="progress"><i style="width:${Q.i/Q.list.length*100}%"></i></div>
+  <div class="qtext">${esc(it.q)}</div>
+  <div class="opts">${it.o.map((o,k)=>`<button class="opt" data-k="${k}"><span class="k">${K[k]||''}</span><span>${esc(o)}</span></button>`).join('')}</div>
+  <div id="after"></div>`;
+}
+$('#qbox').addEventListener('click',e=>{
+  const o=e.target.closest('.opt');
+  if(o&&!o.disabled){
+    const it=Q.list[Q.i],k=+o.dataset.k,ok=k===it.a;
+    $('#qbox').querySelectorAll('.opt').forEach((b,j)=>{b.disabled=true;if(j===it.a)b.classList.add('right')});
+    if(!ok){o.classList.add('wrong');Q.wrong.push(it)}else Q.score++;
+    $('#after').innerHTML=`<div class="explain"><b>${ok?'ঠিক!':'ভুল। সঠিক উত্তর: '+esc(it.o[it.a])}</b>${it.e?' '+esc(it.e):''}</div><div style="margin-top:10px"><button class="btn" id="nextQ">${Q.i+1<Q.list.length?'পরের প্রশ্ন':'ফলাফল দেখো'}</button></div>`;
+    $('#nextQ').focus();
+    return;
+  }
+  if(e.target.id==='nextQ'){Q.i++;renderQ();return}
+  if(e.target.id==='again'){startQuiz(Q.mode);return}
+  if(e.target.id==='retryWrong'){startQuiz(Q.mode,shuffle(Q.wrong.map(w=>({...w}))));return}
+  const mi=e.target.closest('.mitem');if(mi)matchClick(mi);
+});
+function renderEnd(){
+  const n=Q.list.length,pct=Math.round(Q.score/n*100);
+  const key='best_'+Q.mode,best=store.get(key,0);if(pct>best)store.set(key,pct);
+  const msg=pct>=90?'দারুণ! পরীক্ষার জন্য তৈরি।':pct>=70?'ভালো হয়েছে। ভুলগুলো আরেকবার দেখে নাও।':pct>=40?'চলবে, কিন্তু কার্ডগুলো আবার দেখো।':'মাইন্ড ম্যাপ থেকে আবার শুরু করো, তারপর ফিরে এসো।';
+  const wrongTxt=Q.wrong.map(w=>w.q+' → '+w.o[w.a]).join(' | ');
+  $('#qbox').innerHTML=`<div class="score">${bn(Q.score)}/${bn(n)}</div><div><b>${msg}</b></div><div class="best">তোমার সেরা: ${bn(Math.max(pct,best))}%</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${Q.wrong.length?`<button class="btn" id="retryWrong">শুধু ভুলগুলো আবার (${bn(Q.wrong.length)})</button>`:''}<button class="btn ghost" id="again">নতুন করে শুরু</button></div>
+  ${Q.wrong.length?`<div class="explain"><b>যেগুলো ভুল হয়েছে:</b><ul class="plain">${Q.wrong.map(w=>`<li>${esc(w.q)} → <b>${esc(w.o[w.a])}</b></li>`).join('')}</ul>${botBtn('ভুলগুলো বটের কাছে বুঝে নাও',`[পড়ার ক্লাস] কুইজে এগুলো ভুল করেছি: ${wrongTxt}। প্রতিটা কেন এমন, সহজ করে বুঝিয়ে দাও আর মনে রাখার কৌশল দাও, তারপর আবার জিজ্ঞেস করে যাচাই করো।`)}</div>`:''}`;
+}
+let M={sel:null,done:0,tries:0};
+function renderMatch(){
+  M={sel:null,done:0,tries:0};
+  const L=shuffle(D.match.map((p,i)=>({t:p[0],i}))),R=shuffle(D.match.map((p,i)=>({t:p[1],i})));
+  $('#qbox').innerHTML=`<div class="qtext">বাম স্তম্ভের সঙ্গে ডান স্তম্ভ মেলাও</div><p class="note" style="margin:0">বাম দিকে একটায় চাপো, তারপর ডান দিকে তার জোড়ায়।</p>
+  <div class="match"><div class="col">${L.map(x=>`<button class="mitem" data-s="L" data-i="${x.i}">${esc(x.t)}</button>`).join('')}</div><div class="col">${R.map(x=>`<button class="mitem" data-s="R" data-i="${x.i}">${esc(x.t)}</button>`).join('')}</div></div><div id="after"></div>`;
+}
+function matchClick(b){
+  if(b.classList.contains('done'))return;
+  if(b.dataset.s==='L'){$('#qbox').querySelectorAll('.mitem[data-s="L"]').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');M.sel=b;return}
+  if(!M.sel)return;
+  M.tries++;
+  if(M.sel.dataset.i===b.dataset.i){[M.sel,b].forEach(x=>{x.classList.remove('sel');x.classList.add('done');x.disabled=true});M.sel=null;M.done++;
+    if(M.done===D.match.length)$('#after').innerHTML=`<div class="explain"><b>সব মিলেছে!</b> ${bn(M.tries)} বারের চেষ্টায় ${bn(D.match.length)}টি জোড়া।</div><div style="margin-top:10px"><button class="btn ghost" id="again">আবার খেলো</button></div>`;
+  }else{b.classList.add('shake');setTimeout(()=>b.classList.remove('shake'),400)}
+}
+$('#modes').addEventListener('click',e=>{const b=e.target.closest('.chip');if(b)startQuiz(b.dataset.m)});
+
+/* ---------- exam ---------- */
+function ansCard(id){const c=cardBy(id);if(!c)return '';return `<div class="ans-lf" style="--c:${col(c.ag)}">${cardPic(c)}<div><h4>${esc(c.n)}${c.en?' ('+esc(c.en)+')':''}</h4><p><b>সংজ্ঞা:</b> ${esc(c.def)}</p><p><b>${D.orgLabel}:</b> ${esc(c.org)}</p>${c.ex?`<p><b>উদাহরণ:</b> ${esc(c.ex)}</p>`:''}</div></div>`}
+function renderExam(){
+  $('#five').innerHTML=D.five.map(f=>`<details class="acc"><summary><div>${esc(f.q)}<div class="me">${(f.me||[]).map(y=>`<span>${/^\d/.test(y)||/^[০-৯]/.test(y)?'ME '+esc(y):esc(y)}</span>`).join('')}</div></div></summary><div class="in">
+   ${f.text?f.text:(f.cards||[]).map(ansCard).join('')}
+   ${f.alt?`<p class="note" style="margin:0">${esc(f.alt)}</p>`:''}${botBtn('উত্তর লিখে বটকে দেখাও (৫ নম্বর)',examAsk(f.q,5),5)}</div></details>`).join('')||'<p class="note">এখনো নেই।</p>';
+  $('#diffs').innerHTML=D.diffs.map(d=>`<details class="acc"><summary>${esc(d.t)}-এর পার্থক্য</summary><div class="in"><div class="diff"><table><thead><tr><th>বিষয়</th><th>${esc(d.h[0])}</th><th>${esc(d.h[1])}</th></tr></thead><tbody>${d.r.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>${botBtn('উত্তর লিখে বটকে দেখাও (৩ নম্বর)',examAsk(d.t+'-এর পার্থক্য লেখো।',3),3)}</div></details>`).join('')||'<p class="note">এখনো নেই।</p>';
+  $('#twos').innerHTML=D.twos.map(t=>`<details class="acc"><summary>${esc(t[0])}</summary><div class="in"><p style="margin:0">${esc(t[1])}</p>${botBtn('উত্তর লিখে বটকে দেখাও (২ নম্বর)',examAsk(t[0],2),2)}</div></details>`).join('')||'<p class="note">এখনো নেই।</p>';
+}
+
+/* ---------- videos & pictures ---------- */
+const ytId=u=>{const m=String(u||'').match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:''};
+function renderMedia(){
+  $('#vids').innerHTML=D.videos.map(v=>{
+    const y=ytId(v.url);
+    const player=v.file?`<div class="vidbox"><video src="${esc(v.file)}" controls preload="none" playsinline></video></div>`:v.drive?`<div class="vidbox"><iframe src="https://drive.google.com/file/d/${encodeURIComponent(v.drive)}/preview" allow="autoplay; fullscreen" allowfullscreen loading="lazy" title="${esc(v.title)}"></iframe></div>`:y?`<div class="vidbox"><iframe src="https://www.youtube-nocookie.com/embed/${y}" allow="encrypted-media; fullscreen" allowfullscreen loading="lazy" title="${esc(v.title)}"></iframe></div>`:`<p><a class="vid" href="${esc(v.url)}" target="_blank" rel="noopener">▶ ভিডিওটা খোলো</a></p>`;
+    return `<div class="panel"><h3>🎬 ${esc(v.title)}</h3>${player}${botBtn('ভিডিওটা নিয়ে বটের সঙ্গে আলোচনা করো',`[পড়ার ক্লাস] আমি "${v.title}" ভিডিওটা দেখলাম। এর মূল কথাগুলো আমাকে দিয়ে বলিয়ে নাও আর ৩টা প্রশ্নে যাচাই করো।`)}</div>`}).join('');
+  $('#ytlist').innerHTML=D.map.map(b=>`<a class="chip" style="border-color:${col(b.ag)}" href="https://www.youtube.com/results?search_query=${encodeURIComponent(b.yt)}" target="_blank" rel="noopener">▶ ${esc(b.full)}</a>`).join('');
+  $('#pics').innerHTML=D.images.length?`<div class="panel"><h3>🖼️ ছবি</h3><p class="note" style="margin:4px 0 10px">ছবিতে চাপ দিলে বড় করে খুলবে।</p><div class="mgrid">${D.images.map(x=>`<figure><a href="${picUrl(x.id,2000)}" target="_blank" rel="noopener"><img class="pic" loading="lazy" src="${picUrl(x.id,600)}" alt="${esc(x.caption)}"></a><figcaption>${esc(x.caption)}</figcaption></figure>`).join('')}</div></div>`:'';
+}
+
+/* ---------- boot ---------- */
+loadData().then(d=>{
+  D=d;curBranch=(D.geo?'river':(D.map[0]||{}).id);if(D.geo&&!D.map.find(b=>b.id==='river'))curBranch=D.map[0].id;
+  renderHeader();renderPlan();renderRadial();renderTree();renderTricks();renderCards();startQuiz('mix');renderExam();renderMedia();
+  show(location.hash.slice(1)||QS.get('tab')||'start');
+}).catch(e=>{document.querySelector('main .wrap').innerHTML='<div class="panel" style="margin-top:20px"><b>অধ্যায়টা খোলা গেল না।</b><p class="note">ইন্টারনেট চালু করে আবার খোলো।</p></div>';VIEWS.length=0});
+
+</script>
+</body>
+</html>
