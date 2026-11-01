@@ -66,6 +66,22 @@ input,textarea{font:inherit;color:inherit}
 .mode .ic{font-size:24px;line-height:1.2}
 .mode.wide{grid-column:1/-1;flex-direction:row;align-items:center;gap:12px}
 .mode.wide .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.lrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:10px 12px;color:inherit;font:inherit}
+.lrow .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lrow b{font-size:16px;line-height:1.3}
+.lrow .grow>span{font-size:13.5px;color:var(--muted)}
+.lrow .lnum{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);font-weight:700;font-size:15px}
+.lrow .lic{flex:none;font-size:22px}
+.lrow.next{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.lrow.next .lnum{background:var(--accent);color:var(--accent-ink)}
+.lrow.done .lnum{background:var(--ok);color:#fff}
+.lpill{flex:none;font-size:12px;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.lpill.done{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.lpill.go{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.lpill.now{background:var(--accent);color:var(--accent-ink)}
+.msg.bot.lend{align-self:stretch;max-width:100%;background:color-mix(in srgb,var(--ok) 12%,var(--bot));border:1.5px solid var(--ok)}
+.lbtns{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:10px}
+.lbtns .btn{width:100%}
 .pill{font-size:12.5px;font-weight:700;border-radius:99px;padding:1px 9px;background:var(--gold);color:#fff;align-self:flex-start}
 .badges{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .bdg{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-size:11.5px;line-height:1.25;color:var(--muted)}
@@ -76,7 +92,7 @@ input,textarea{font:inherit;color:inherit}
 /* top bar (chat / world / deck) */
 .top{display:flex;align-items:center;gap:8px;padding-block:8px;border-bottom:1px solid var(--line);background:var(--surface)}
 .top h1{flex:1;margin:0;font-family:var(--f-display);font-size:20px;line-height:1.2;min-width:0}
-.top h1 small{display:block;font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:500}
+.top h1 small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:500}
 .iconbtn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
 .iconbtn[aria-pressed="true"]{background:var(--sunk)}
 .xpchip{font-size:13px;font-weight:700;color:var(--accent);background:var(--sunk);border-radius:99px;padding:2px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -207,7 +223,7 @@ input,textarea{font:inherit;color:inherit}
         <button class="mode" data-mode="viva"><span class="ic">🎙️</span><b>মৌখিক</b><span>মুখে বলে উত্তর</span></button>
         <button class="mode" data-mode="practice"><span class="ic">✍️</span><b>অনুশীলন</b><span>লিখে উত্তর, সঙ্গে সঙ্গে শেখা</span></button>
         <button class="mode" data-mode="test"><span class="ic">📝</span><b>পরীক্ষা</b><span>১০ প্রশ্ন, শেষে রিপোর্ট</span></button>
-        <button class="mode" data-mode="learn"><span class="ic">🧠</span><b>শেখো</b><span>শুরু থেকে ছোট ছোট ভাগে</span></button>
+        <button class="mode" id="goLessons"><span class="ic">🧠</span><b>শেখো</b><span id="lessonLine">দিনে একটা পাঠ, ১৪ দিনে পুরো অধ্যায়</span></button>
       </div>
       <div class="card">
         <h2>ব্যাজ</h2>
@@ -244,6 +260,15 @@ input,textarea{font:inherit;color:inherit}
         <button class="iconbtn" id="repeatB" aria-label="আবার শোনাও">🔁</button>
       </div>
     </div>
+  </section>
+
+  <!-- LESSON MAP -->
+  <section class="screen" id="s-lessons" hidden>
+    <div class="top pad">
+      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
+      <h1>শেখো · পাঠ-যাত্রা<small id="lessonsSub">০ / ১৪ পাঠ শেষ</small></h1>
+    </div>
+    <div class="scroll pad" id="lessonsBody"></div>
   </section>
 
   <!-- MY WORLD -->
@@ -345,8 +370,9 @@ let mode = 'practice';
 let hist = [];
 let busy = false;
 const K = (k) => k + '_' + (me ? me.roll : '');   // per-student storage keys
-const chatKey = () => K('chat_' + mode);
-const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck'];
+let lesson = 0;                      // current lesson number in "শেখো" (0 = not a lesson chat)
+const chatKey = () => K('chat_' + mode + (mode === 'learn' && lesson ? '_L' + lesson : ''));
+const VIEWS = ['s-login', 's-home', 's-chat', 's-world', 's-deck', 's-lessons'];
 function show(id) { VIEWS.forEach((s) => { $('#' + s).hidden = s !== id; }); }
 document.querySelectorAll('[data-home]').forEach((b) => b.addEventListener('click', () => goHome()));
 
@@ -548,6 +574,65 @@ $('#deckBody').addEventListener('click', (e) => {
 });
 $('#goDeck').onclick = openDeck;
 
+/* ============ "শেখো": day-by-day lessons (same numbers and titles as LESSONS on the server) ============ */
+const LESSONS = [
+  ['🌞', 'বহির্জাত প্রক্রিয়া কী', 'সংজ্ঞা, বৈশিষ্ট্য, মাধ্যম'],
+  ['⚖️', 'অবরোহণ, আরোহণ, পর্যায়ন ও নগ্নীভবন', 'ভূমি কীভাবে ক্ষয়ে আর ভরে'],
+  ['🏞️', 'নদী: পরিভাষা, তিন গতি, ক্ষয় ও বহন', 'উচ্চ, মধ্য, নিম্নগতি'],
+  ['🔻', 'V উপত্যকা, গিরিখাত ও ক্যানিয়ন', 'নদীর ক্ষয়জাত ভূমিরূপ ১'],
+  ['💦', 'জলপ্রপাত, প্রপাতকূপ ও মন্থকূপ', 'নদীর ক্ষয়জাত ভূমিরূপ ২'],
+  ['🌀', 'পলল ব্যজনী, মিয়েন্ডার ও অশ্বক্ষুরাকৃতি হ্রদ', 'নদীর সঞ্চয়জাত ভূমিরূপ ১'],
+  ['🔺', 'প্লাবনভূমি, স্বাভাবিক বাঁধ ও বদ্বীপ', 'নদীর সঞ্চয়জাত ভূমিরূপ ২'],
+  ['🏔️', 'হিমবাহ পরিচিতি, সার্ক, এরিটি, পিরামিড চূড়া', 'হিমবাহের ক্ষয়জাত ভূমিরূপ ১'],
+  ['🧊', 'হিমদ্রোণী, ঝুলন্ত উপত্যকা, রসে মোতানে, ক্র্যাগ ও টেল, ফিয়র্ড', 'হিমবাহের ক্ষয়জাত ভূমিরূপ ২'],
+  ['🪨', 'গ্রাবরেখা ও হিমবাহ-জলধারার ভূমিরূপ', 'গ্রাবরেখা, ড্রামলিন, এসকার, কেম, কেটল'],
+  ['🍄', 'বায়ুর কাজ: ক্ষয়জাত ভূমিরূপ', 'গৌর, জিউগেন, ইয়ারদাঙ, ইনসেলবার্জ'],
+  ['🏜️', 'বালিয়াড়ি, লোয়েস ও মরুর জলধারার ভূমিরূপ', 'বার্খান, সিফ, লোয়েস, ওয়াদি, প্লায়া'],
+  ['🌳', 'সুন্দরবন ও মরু প্রসারণ', 'জলবায়ু পরিবর্তন ও মরুভূমির বিস্তার'],
+  ['🏁', 'পুরো অধ্যায় ঝালাই', 'সব পাঠ থেকে মিশ্র প্রশ্ন'],
+];
+const lessonsDone = () => store.get(K('lessons'), []);
+function markLessonDone(n) { const d = lessonsDone(); if (!d.includes(n)) { d.push(n); d.sort((a, b) => a - b); store.set(K('lessons'), d); return true; } return false; }
+const nextLesson = () => { const d = lessonsDone(); const i = LESSONS.findIndex((_, j) => !d.includes(j + 1)); return i < 0 ? 0 : i + 1; };
+const lessonStarted = (n) => store.get(K('chat_learn_L' + n), []).length > 0;
+function renderLessonLine() {
+  const d = lessonsDone().length, n = nextLesson();
+  $('#lessonLine').textContent = d ? (n ? `${bn(d)}/${bn(LESSONS.length)} শেষ · এবার পাঠ ${bn(n)}` : 'সব পাঠ শেষ! 🏆') : 'দিনে একটা পাঠ, ১৪ দিনে পুরো অধ্যায়';
+}
+function openLessons() {
+  stopAll(); show('s-lessons');
+  const d = lessonsDone(), nx = nextLesson();
+  $('#lessonsSub').textContent = `${bn(d.length)} / ${bn(LESSONS.length)} পাঠ শেষ`;
+  $('#lessonsBody').innerHTML =
+    `<p class="small" style="margin:0">রোজ একটা করে পাঠ করো। মাঝপথে বেরিয়ে গেলে পরের দিন ঠিক সেখান থেকেই শুরু হবে। যেকোনো পাঠ যেকোনো সময় খুলতে পারো।</p>` +
+    LESSONS.map((L, i) => {
+      const n = i + 1, done = d.includes(n), started = !done && lessonStarted(n), isNext = n === nx;
+      const tag = done ? '<span class="lpill done">✓ শেষ</span>' : started ? '<span class="lpill go">চলছে</span>' : isNext ? '<span class="lpill now">আজ এটা</span>' : '';
+      return `<button class="lrow${isNext ? ' next' : ''}${done ? ' done' : ''}" data-lesson="${n}"><span class="lnum">${done ? '✓' : bn(n)}</span><span class="lic">${L[0]}</span><span class="grow"><b>পাঠ ${bn(n)}: ${esc(L[1])}</b><span>${esc(L[2])}</span></span>${tag}</button>`;
+    }).join('');
+  const el = $('#lessonsBody .next'); if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'center' }));
+}
+$('#goLessons').onclick = openLessons;
+$('#lessonsBody').addEventListener('click', (e) => { const b = e.target.closest('[data-lesson]'); if (b) openChat('learn', Number(b.dataset.lesson)); });
+function lessonFinished(n) {
+  const first = markLessonDone(n);
+  if (first) { addXp(30, 'পাঠ ' + bn(n) + ' শেষ'); markToday(); }
+  lessonEndCard(n);
+}
+function lessonEndCard(n) {
+  const d = document.createElement('div'); d.className = 'msg bot note lend';
+  const nx = nextLesson();
+  d.innerHTML = `<b>🎉 পাঠ ${bn(n)} শেষ!</b><br><span class="small">${nx ? 'কাল (বা এখনই) পরের পাঠে যেতে পারো।' : 'পুরো অধ্যায় শেষ! এবার পরীক্ষা মোডে নিজেকে যাচাই করো।'}</span><div class="lbtns">` +
+    (nx ? `<button class="btn" data-goto="${nx}">পাঠ ${bn(nx)}: ${esc(LESSONS[nx - 1][1])} ➜</button>` : `<button class="btn" data-goto="test">পরীক্ষা দাও ➜</button>`) +
+    `<button class="linkbtn" data-goto="map">সব পাঠের তালিকা</button></div>`;
+  $('#log').appendChild(d); scrollEnd();
+}
+$('#log').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-goto]'); if (!b) return;
+  const g = b.dataset.goto;
+  if (g === 'map') openLessons(); else if (g === 'test') openChat('test'); else openChat('learn', Number(g));
+});
+
 /* ============ server ============ */
 async function call(body) {
   const url = api();
@@ -577,10 +662,11 @@ function boot() { loadWorld(); loadGame(); loadDeck(); goHome(); }
 async function goHome() {
   stopAll(); show('s-home');
   $('#hello').textContent = 'নমস্কার, ' + me.name.split(' ')[0] + '!';
-  renderHud();
+  renderHud(); renderLessonLine();
   $('#progBody').textContent = 'লোড হচ্ছে…';
   try {
-    const { progress: p } = await call({ action: 'progress' });
+    const { progress: p, lessons_done: ld } = await call({ action: 'progress' });
+    if (Array.isArray(ld)) { ld.forEach((n) => markLessonDone(Number(n))); renderLessonLine(); } // lessons finished on another phone count too
     if (!p.count) { $('#progBody').innerHTML = 'এখনো কোনো উত্তর দাওনি। যেকোনো একটা খেলা দিয়ে শুরু করো।'; return; }
     let h = `মোট উত্তর দিয়েছ: <b>${bn(p.count)}</b>`;
     if (p.due.length) h += `<div style="margin-top:8px">আজ আবার ঝালাতে হবে:</div><div class="chips">${p.due.map((x) => `<span class="chip due">${esc(x)}</span>`).join('')}</div>`;
@@ -591,9 +677,12 @@ async function goHome() {
 document.querySelectorAll('.mode[data-mode]').forEach((b) => b.addEventListener('click', () => openChat(b.dataset.mode)));
 
 /* ============ chat ============ */
-function openChat(m) {
-  mode = m; show('s-chat');
-  $('#chatTitle').innerHTML = `${MODE_NAME[m]}<small>শিক্ষক বট · ${esc(me.name)}</small>`;
+function openChat(m, n) {
+  stopAll();
+  mode = m; lesson = m === 'learn' ? (n || nextLesson() || LESSONS.length) : 0; show('s-chat');
+  $('#chatTitle').innerHTML = lesson
+    ? `শেখো · পাঠ ${bn(lesson)}<small>${esc(LESSONS[lesson - 1][1])}</small>`
+    : `${MODE_NAME[m]}<small>শিক্ষক বট · ${esc(me.name)}</small>`;
   $('#chatXp').textContent = bn(game.xp) + ' XP';
   const viva = m === 'viva';
   $('#vivabar').hidden = !viva; $('#composer').hidden = viva;
@@ -601,15 +690,24 @@ function openChat(m) {
   hist = store.get(chatKey(), []);
   $('#log').innerHTML = '';
   hist.forEach(paint);
-  if (!hist.length) start(); else scrollEnd();
+  if (!hist.length) { start(); return; }
+  scrollEnd();
+  if (lesson && lessonsDone().includes(lesson)) { lessonEndCard(lesson); return; }
+  // Coming back to an unfinished lesson after a break (e.g. the next day): the bot recaps and continues from where it stopped.
+  const last = store.get(chatKey() + '_at', 0);
+  if (lesson && Date.now() - last > 3 * 3600 * 1000 && hist[hist.length - 1].role === 'model') send('[ফিরে এলাম] কিছুক্ষণ বিরতির পর আবার এই পাঠে ফিরলাম। এই পাঠে আগে যা শিখেছি তা ২ লাইনে মনে করিয়ে দাও, তারপর যেখানে থেমেছিলাম সেখান থেকে চালাও।', true);
 }
 function start() {
   hist = []; $('#log').innerHTML = '';
   const thin = worldPct() < 30 ? ' (আমার জগৎ এখনো প্রায় খালি)' : '';
+  if (lesson) {
+    send(`[শুরু] মোড: learn, পাঠ ${lesson}: ${LESSONS[lesson - 1][1]}. আমার নাম ${me.name}${thin}। আমাকে স্বাগত জানাও, আজকের পাঠে কী কী শিখব এক লাইনে বলো, তারপর শুরু করো।`, true);
+    return;
+  }
   send(`[শুরু] মোড: ${mode}. আমার নাম ${me.name}${thin}। আমাকে স্বাগত জানাও, এই মোডে কী হবে এক লাইনে বলো, তারপর প্রথম প্রশ্ন করো।`, true);
 }
 $('#restart').onclick = () => { stopAll(); store.del(chatKey()); start(); };
-$('#back').onclick = () => goHome();
+$('#back').onclick = () => (lesson ? openLessons() : goHome());
 
 function paint(m) {
   if (m.hidden) return;
@@ -632,7 +730,7 @@ function typing(on) {
   if (on && !t) { t = document.createElement('div'); t.id = 'typing'; t.className = 'typing'; t.innerHTML = 'বট ভাবছে <i></i><i></i><i></i>'; $('#log').appendChild(t); scrollEnd(); }
   if (!on && t) t.remove();
 }
-function save() { store.set(chatKey(), hist.filter((m) => !m.err).slice(-60)); }
+function save() { store.set(chatKey(), hist.filter((m) => !m.err).slice(-60)); store.set(chatKey() + '_at', Date.now()); }
 
 async function send(text, hidden) {
   text = String(text || '').trim();
@@ -645,7 +743,7 @@ async function send(text, hidden) {
 async function ask() {
   busy = true; typing(true); $('#sendB').disabled = true;
   try {
-    const out = await call({ action: 'chat', mode, world: worldText(), game: gameText(), history: hist.filter((x) => !x.err).slice(-16).map((x) => ({ role: x.role, text: x.text })) });
+    const out = await call({ action: 'chat', mode, lesson: lesson || undefined, done: lesson ? lessonsDone() : undefined, world: worldText(), game: gameText(), history: hist.filter((x) => !x.err).slice(-16).map((x) => ({ role: x.role, text: x.text })) });
     const m = { role: 'model', text: out.reply || '…', a: out.assessment, tech: out.technique };
     if (out.memory_card) { m.card = out.memory_card; addCard(out.memory_card); }
     const anc = out.new_anchor || (out.nickname ? { term: out.nickname.term, hook: out.nickname.nickname + (out.nickname.why ? ': ' + out.nickname.why : '') } : null);
@@ -656,6 +754,7 @@ async function ask() {
     }
     typing(false); hist.push(m); paint(m); save();
     gameUpdate(out);
+    if (lesson && (out.lesson_done || out.end_of_test)) lessonFinished(lesson);
     if (speakOn) say(out.speak || out.reply);
   } catch (e) {
     typing(false);
@@ -675,7 +774,7 @@ function gameUpdate(out) {
   }
   if (out.nickname) award('pnn');
   if (out.memory_card) addXp(5, 'নতুন কার্ড');
-  if (out.end_of_test) addXp(20, 'পরীক্ষা শেষ');
+  if (out.end_of_test && mode !== 'learn') addXp(20, 'পরীক্ষা শেষ');
 }
 function retry() { hist = hist.filter((x) => !x.err); $('#log').innerHTML = ''; hist.forEach(paint); ask(); }
 
