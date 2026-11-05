@@ -209,6 +209,13 @@ input,textarea{font:inherit;color:inherit}
 .mode.hero{background:var(--accent);border-color:var(--accent)}
 .mode.hero b,.mode.hero span{color:var(--accent-ink)}
 .mode.hero .grow>span{opacity:.9}
+.chcard{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-left:6px solid var(--accent);border-radius:18px;padding:16px;color:inherit;font:inherit;cursor:pointer}
+.chcard.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.chcard .no{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.3px}
+.chcard b{font-family:var(--f-display);font-size:23px;line-height:1.2;color:var(--ink)}
+.chcard .meta2{font-size:14px;color:var(--muted)}
+.chcard .go{align-self:flex-start;margin-top:4px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:6px 14px;font-weight:700;font-size:15px}
+.chcard .bar{margin-top:2px}
 .chbar{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--accent);color:#fff;border:0;border-radius:16px;padding:10px 14px;font:inherit;cursor:pointer}
 .chbar .grow{flex:1;min-width:0}
 .chbar b{font-family:var(--f-display);font-size:18px;display:block;line-height:1.25}
@@ -361,8 +368,7 @@ input,textarea{font:inherit;color:inherit}
   <!-- CHAPTER LIST -->
   <section class="screen" id="s-chapters" hidden>
     <div class="top pad">
-      <button class="iconbtn" data-home aria-label="ফিরে যাও">←</button>
-      <h1>অধ্যায় বেছে নাও<small id="chaptersSub">যে অধ্যায় পড়বে, তাতে চাপ দাও</small></h1>
+      <h1 id="chaptersHi">নমস্কার!<small id="chaptersSub">কোন অধ্যায় পড়বে? অধ্যায়ে চাপ দাও</small></h1>
     </div>
     <div class="scroll pad" id="chaptersBody"></div>
   </section>
@@ -857,8 +863,8 @@ $('#logout').onclick = () => { store.del('me'); me = null; show('s-login'); };
 function boot() {
   loadWorld(); loadGame();
   useChapter(store.get(K('chap'), 'geo1')).catch(() => useChapter('geo1')).then(() => {
-    goHome(); seedDeck().then((n) => { if (n && !$('#s-home').hidden) renderHud(); });
-    refreshChapters();
+    openChapters();          // the app always opens on the chapter list
+    seedDeck();
     const pend = store.get('pendingAsk', null);
     if (pend) { store.del('pendingAsk'); const go = () => askFromStudy(pend.text, pend.marks); if (pend.ch && pend.ch !== chap) useChapter(pend.ch).then(go, go); else go(); }
   });
@@ -899,7 +905,8 @@ function renderChapterBar() {
   renderLessonLine();
 }
 function openChapters() {
-  stopAll(); show('s-chapters');
+  stopAll(); show('s-chapters'); fromStudy = false;
+  $('#chaptersHi').firstChild.nodeValue = 'নমস্কার, ' + me.name.split(' ')[0] + '!';
   renderChapters(store.get('chlist', []));
   refreshChapters().then((l) => { if (!$('#s-chapters').hidden) renderChapters(l); });
 }
@@ -908,12 +915,16 @@ function renderChapters(list) {
   const subjects = [];
   list.forEach((c) => { if (subjects.indexOf(c.subject) < 0) subjects.push(c.subject); });
   $('#chaptersBody').innerHTML = subjects.map((s) => `<p class="subj">${esc(s || 'অন্যান্য')}</p>` + list.filter((c) => c.subject === s).map((c) => {
-    const done = store.get(K('lessons') + sfx(c.id), []).length, on = c.id === chap;
-    return `<button class="lrow${on ? ' next' : ''}" data-chap="${esc(c.id)}"><span class="lnum">${bn(c.order || '')}</span><span class="grow"><b>${esc(c.title)}</b><span>${c.lessons ? bn(done) + '/' + bn(c.lessons) + ' পাঠ শেষ' : ''}${c.questions ? ' · ' + bn(c.questions) + 'টি প্রশ্ন' : ''}</span></span>${on ? '<span class="lpill now">এখন পড়ছ</span>' : ''}</button>`;
-  }).join('')).join('') + `<p class="small">নতুন অধ্যায় শিক্ষক যোগ করলেই এখানে চলে আসবে।</p>`;
+    const done = store.get(K('lessons') + sfx(c.id), []).length, on = c.id === chap, pct = c.lessons ? Math.round(100 * done / c.lessons) : 0;
+    return `<button class="chcard${on ? ' on' : ''}" data-chap="${esc(c.id)}"><span class="no">অধ্যায় ${bn(c.order || '')}${on ? ' · এখন পড়ছ' : ''}</span><b>${esc(c.title)}</b>` +
+      `<span class="meta2">${c.lessons ? bn(c.lessons) + 'টি পাঠ · ' + bn(done) + 'টি শেষ' : ''}${c.questions ? ' · ' + bn(c.questions) + 'টি প্রশ্ন' : ''}</span>` +
+      (c.lessons ? `<span class="bar"><i style="width:${pct}%"></i></span>` : '') + `<span class="go">${done ? 'আবার পড়ো ➜' : 'পড়া শুরু করো ➜'}</span></button>`;
+  }).join('')).join('') + `<p class="small">পড়ার ক্লাস, শেখো, প্রশ্নব্যাংক, স্মৃতি-কার্ড আর শিক্ষক বট: প্রতিটা অধ্যায়ের নিজের। নতুন অধ্যায় শিক্ষক যোগ করলেই এখানে চলে আসবে।</p>` +
+    `<button class="linkbtn" data-logout style="align-self:flex-start">অন্য ছাত্র/ছাত্রী? লগ আউট</button>`;
 }
 $('#goChapters').onclick = openChapters;
 $('#chaptersBody').addEventListener('click', async (e) => {
+  if (e.target.closest('[data-logout]')) { $('#logout').click(); return; }
   const b = e.target.closest('[data-chap]'); if (!b) return;
   const id = b.dataset.chap, info = store.get('chlist', []).find((c) => c.id === id) || {};
   const cached = store.get('chapdata_' + id, null);
@@ -1163,8 +1174,10 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 // Android back button inside the app: go one screen back instead of closing the app. Returns false on the first screen.
 window.appBack = () => {
   const vis = VIEWS.find((v) => !$('#' + v).hidden);
-  if (!vis || vis === 's-home' || vis === 's-login') return false;
-  if (vis === 's-chat' && lesson) openLessons(); else goHome();
+  if (!vis || vis === 's-chapters' || vis === 's-login') return false;
+  if (vis === 's-home') openChapters();
+  else if (vis === 's-chat' && fromStudy) { fromStudy = false; openStudy(); }
+  else if (vis === 's-chat' && lesson) openLessons(); else goHome();
   return true;
 };
 function alertMsg(t) { paint({ role: 'model', text: t, err: true, note: true }); }
